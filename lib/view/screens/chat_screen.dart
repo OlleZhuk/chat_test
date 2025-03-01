@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 
 import '../../model/message.dart';
 import '../../model/user.dart';
+import '../../view_model/widgets/video_player.dart';
 
 class ChatScreen extends StatelessWidget {
   final User user;
@@ -14,6 +15,7 @@ class ChatScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    String currentUserId = 'superuser';
     return Scaffold(
       appBar: AppBar(
         title: Column(
@@ -31,7 +33,7 @@ class ChatScreen extends StatelessWidget {
       body: Column(
         children: [
           Expanded(
-            child: ValueListenableBuilder(
+            child: ValueListenableBuilder<Box<Message>>(
               valueListenable: Hive.box<Message>('message_box').listenable(),
               builder: (context, Box<Message> box, _) {
                 final messages = box.values.toList();

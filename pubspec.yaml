@@ -24,7 +24,23 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
   assets:
-    - assets/fonts
+    - assets/
+    - assets/fonts/
     - assets/icons/
     - assets/images/
+  
+  fonts:
+    - family: Gilroy
+      fonts:
+        - asset: assets/fonts/Gilroy-Thin-100.ttf
+        - asset: assets/fonts/Gilroy-UltraLight-200.ttf
+        - asset: assets/fonts/Gilroy-Light-300.ttf
+        - asset: assets/fonts/Gilroy-Regular-normal.ttf
+        - asset: assets/fonts/Gilroy-Medium-500.ttf
+        - asset: assets/fonts/Gilroy-Semibold-600.ttf
+        - asset: assets/fonts/Gilroy-Bold-bold.ttf
+        - asset: assets/fonts/Gilroy-Extrabold-800.ttf
+        - asset: assets/fonts/Gilroy-Heavy-900.ttf
+        - asset: assets/fonts/Gilroy-Black-900.ttf

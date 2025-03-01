@@ -16,25 +16,28 @@ class DialogsScreen extends StatelessWidget {
         title: const Text("Чаты"),
         actions: [
           IconButton(
-              icon: const Icon(Icons.add),
+              icon: Image.asset('assets/icons/Add_circle.png'),
               onPressed: () => _addContact(context)),
           IconButton(
-              icon: const Icon(Icons.exit_to_app),
+              icon: Image.asset('assets/icons/Out_right.png'),
               onPressed: () => _logout(context)),
         ],
-      ),
-      body: Column(
-        children: [
-          Padding(
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(50.0),
+          child: Padding(
             padding: const EdgeInsets.all(8.0),
             child: TextField(
               controller: _searchController,
-              decoration: const InputDecoration(
-                hintText: "Поиск контакта",
-                prefixIcon: Icon(Icons.search),
+              decoration: InputDecoration(
+                hintText: "Поиск",
+                prefixIcon: Image.asset('assets/icons/Search_s.png'),
               ),
             ),
           ),
+        ),
+      ),
+      body: Column(
+        children: [
           Expanded(
             child: ValueListenableBuilder(
               valueListenable: Hive.box<User>('users_box').listenable(),
@@ -43,7 +46,8 @@ class DialogsScreen extends StatelessWidget {
                 if (users.isEmpty) {
                   return const Center(
                       child: Text(
-                          "Здесь пока никого нет.\nВы авторизованы как superuser.\nИспользуйте (+), чтобы добавить себе собеседника."));
+                          textAlign: TextAlign.center,
+                          "Здесь пока никого нет.\nВы авторизованы как superuser.\nИспользуйте (+), чтобы добавить\nсебе собеседника."));
                 }
                 return ListView.builder(
                   itemCount: users.length,

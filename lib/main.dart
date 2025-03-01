@@ -28,9 +28,12 @@ class MainApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      theme: ThemeData.dark().copyWith(
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        brightness: Brightness.dark,
         primaryColor: Colors.blueGrey,
         scaffoldBackgroundColor: Colors.grey[900],
+        fontFamily: 'Gilroy',
       ),
       home: DialogsScreen(),
     );
