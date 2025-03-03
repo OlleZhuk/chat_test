@@ -1,26 +1,26 @@
 import 'package:flutter/material.dart';
-import 'package:hive_flutter/adapters.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../model/user.dart';
-import 'one_chat_screen.dart';
+import '../../view_model/providers/chat_provider.dart';
+import 'messages_screen.dart';
 
-class AllChatsScreen extends StatelessWidget {
+class ChatListScreen extends ConsumerWidget {
+  ChatListScreen({super.key});
+
   final _searchController = TextEditingController();
 
-  AllChatsScreen({super.key});
-
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final chats = ref.watch(chatProvider);
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Чаты"),
+        title: const Text('Чаты'),
         actions: [
           IconButton(
-              icon: Image.asset('assets/icons/Add_circle.png'),
-              onPressed: () => _addContact(context)),
-          IconButton(
-              icon: Image.asset('assets/icons/Out_right.png'),
-              onPressed: () => _logout(context)),
+            onPressed: () => ref.read(chatProvider.notifier).clearChat(),
+            icon: const Icon(Icons.refresh),
+          )
         ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(50.0),
@@ -36,43 +36,35 @@ class AllChatsScreen extends StatelessWidget {
           ),
         ),
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: ValueListenableBuilder(
-              valueListenable: Hive.box<User>('users_box').listenable(),
-              builder: (context, Box<User> box, _) {
-                final users = box.values.toList();
-                if (users.isEmpty) {
-                  return const Center(
-                      child: Text(
-                          textAlign: TextAlign.center,
-                          "Здесь пока никого нет.\nВы авторизованы как superuser.\nИспользуйте (+), чтобы добавить\nсебе собеседника."));
-                }
-                return ListView.builder(
-                  itemCount: users.length,
-                  itemBuilder: (context, index) {
-                    final user = users[index];
-                    return ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor:
-                            Colors.primaries[index % Colors.primaries.length],
-                        child: Text(user.firstName[0]),
-                      ),
-                      title: Text(user.firstName),
-                      subtitle: Text(user.lastName ?? ""),
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (context) => OneChatScreen(user: user)),
-                      ),
-                    );
-                  },
+      body: ListView.builder(
+        itemCount: chats.length,
+        itemBuilder: (context, index) {
+          final user = chats[index];
+          return Dismissible(
+            key: Key(user.lastName),
+            onDismissed: (direction) {
+              ref.read(chatProvider.notifier).deleteChat(user.lastName);
+            },
+            child: ListTile(
+              leading: CircleAvatar(
+                backgroundColor: user.color,
+                child: Text('${user.firstName[0]}${user.lastName[0]}'),
+              ),
+              title: Text('${user.firstName} ${user.lastName}'),
+              // subtitle: Text(user.key),
+              subtitle: const Text('Последнее сообщение'),
+              trailing: const Text('Время'),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => MessagesScreen(user: user),
+                  ),
                 );
               },
             ),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
