@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 
 part 'message.g.dart';
@@ -5,27 +6,29 @@ part 'message.g.dart';
 @HiveType(typeId: 2)
 class Message {
   @HiveField(0)
-  final String id;
+  final UniqueKey id;
   @HiveField(1)
   final String senderId;
   @HiveField(2)
-  final String? text;
+  final String text;
   @HiveField(3)
-  final DateTime timestamp;
+  final String filePath;
   @HiveField(4)
-  bool isRead;
+  final String fileType;
   @HiveField(5)
-  final String? filePath;
+  final DateTime timestamp;
   @HiveField(6)
-  final String? fileType;
+  final bool isOutgoing; // true - исходящее, false - входящее
+  @HiveField(7)
+  bool isRead = false;
 
-  Message({
-    required this.id,
-    required this.senderId,
+  Message(
+    this.id,
+    this.senderId,
     this.text,
-    required this.timestamp,
-    this.isRead = false,
     this.filePath,
     this.fileType,
-  });
+    this.timestamp,
+    this.isOutgoing,
+  );
 }

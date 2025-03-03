@@ -4,7 +4,7 @@ import 'message.dart';
 
 part 'chat.g.dart';
 
-@HiveType(typeId: 3)
+@HiveType(typeId: 0)
 class Chat {
   @HiveField(0)
   final String id;

@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 
 part 'user.g.dart';
@@ -5,18 +6,16 @@ part 'user.g.dart';
 @HiveType(typeId: 1)
 class User {
   @HiveField(0)
-  final String id;
-  @HiveField(1)
   final String firstName;
+  @HiveField(1)
+  final String lastName;
   @HiveField(2)
-  final String? lastName;
-  @HiveField(3)
-  final int pinCode;
+  final Color
+      color; // Цвет аватарки, тип Color задан отдельно в color_adapter.dart
 
-  User({
-    required this.id,
-    required this.firstName,
+  User(
+    this.firstName,
     this.lastName,
-    required this.pinCode,
-  });
+    this.color,
+  );
 }
