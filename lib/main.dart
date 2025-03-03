@@ -6,7 +6,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'model/chat.dart';
 import 'model/message.dart';
 import 'model/user.dart';
-import 'view/screens/dialogs_screen.dart';
+import 'view/screens/all_chats_screen.dart';
 
 void main() async {
   var path = Directory.current.path;
@@ -35,7 +35,7 @@ class MainApp extends StatelessWidget {
         scaffoldBackgroundColor: Colors.grey[900],
         fontFamily: 'Gilroy',
       ),
-      home: DialogsScreen(),
+      home: AllChatsScreen(),
     );
   }
 }

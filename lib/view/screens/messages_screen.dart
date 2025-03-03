@@ -8,10 +8,10 @@ import '../../model/message.dart';
 import '../../model/user.dart';
 import '../../view_model/widgets/video_player.dart';
 
-class ChatScreen extends StatelessWidget {
+class OneChatScreen extends StatelessWidget {
   final User user;
 
-  const ChatScreen({super.key, required this.user});
+  const OneChatScreen({super.key, required this.user});
 
   @override
   Widget build(BuildContext context) {

@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:hive_flutter/adapters.dart';
 
 import '../../model/user.dart';
-import 'chat_screen.dart';
+import 'one_chat_screen.dart';
 
-class DialogsScreen extends StatelessWidget {
+class AllChatsScreen extends StatelessWidget {
   final _searchController = TextEditingController();
 
-  DialogsScreen({super.key});
+  AllChatsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -64,7 +64,7 @@ class DialogsScreen extends StatelessWidget {
                       onTap: () => Navigator.push(
                         context,
                         MaterialPageRoute(
-                            builder: (context) => ChatScreen(user: user)),
+                            builder: (context) => OneChatScreen(user: user)),
                       ),
                     );
                   },
