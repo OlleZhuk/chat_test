@@ -4,27 +4,44 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:intl/intl.dart';
 
 import '../../model/message.dart';
-import '../../model/radius.dart';
+import '../../model/chat_bubble_radius.dart';
 import '../../model/user.dart';
 import '../../view_model/providers/chat_provider.dart';
 import '../../view_model/widgets/left_chat_bubble.dart';
 import '../../view_model/widgets/right_chat_bubble.dart';
 
-class MessagesScreen extends ConsumerWidget {
+class MessagesScreen extends ConsumerStatefulWidget {
   const MessagesScreen({super.key, required this.user});
 
   final User user;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  MessagesScreenState createState() => MessagesScreenState();
+}
+
+class MessagesScreenState extends ConsumerState<MessagesScreen> {
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final messagesBox = Hive.box<Message>('messages');
-    // final messages = messagesBox.values.toList();
 
-    // Фильтруем сообщения по userId
+    // Фильтр сообщений по userId
     final userMessages = messagesBox.values
-        .where((message) => message.userId == user.id)
+        .where((message) => message.userId == widget.user.id)
         .toList();
+
+    // Сортировка сообщений по времени (новые снизу)
+    userMessages.sort((a, b) => b.timestamp.compareTo(a.timestamp));
 
     return Scaffold(
       appBar: AppBar(
@@ -33,14 +50,15 @@ class MessagesScreen extends ConsumerWidget {
           children: [
             CircleAvatar(
               minRadius: 24,
-              backgroundColor: user.color,
-              child: Text('${user.firstName[0]}${user.lastName[0]}'),
+              backgroundColor: widget.user.color,
+              child:
+                  Text('${widget.user.firstName[0]}${widget.user.lastName[0]}'),
             ),
             const SizedBox(width: 10),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('${user.firstName} ${user.lastName}'),
+                Text('${widget.user.firstName} ${widget.user.lastName}'),
                 const Text(
                   'Не в сети',
                   style: TextStyle(fontSize: 16),
@@ -54,6 +72,7 @@ class MessagesScreen extends ConsumerWidget {
         children: [
           Expanded(
             child: ListView.builder(
+              controller: _scrollController,
               reverse: true,
               itemCount: userMessages.length,
               itemBuilder: (context, index) {
@@ -61,11 +80,6 @@ class MessagesScreen extends ConsumerWidget {
                 final isMe = message.isOutgoing;
                 final now = message.timestamp;
                 String formattedTime = DateFormat.Hm().format(now);
-                // userMessages.sort((a, b) {
-                //   print(a.timestamp);
-                //   print(b.timestamp);
-                //   return b.timestamp.compareTo(a.timestamp);
-                // });
 
                 return Column(
                   crossAxisAlignment:
@@ -87,7 +101,7 @@ class MessagesScreen extends ConsumerWidget {
                         height: 52,
                         color: isMe
                             ? theme.colorScheme.secondaryContainer
-                            : user.color.withOpacity(.5),
+                            : widget.user.color.withOpacity(.5),
                         padding: const EdgeInsets.symmetric(horizontal: 14),
                         child: isMe
                             ? Row(
@@ -142,7 +156,9 @@ class MessagesScreen extends ConsumerWidget {
                       hintText: 'Сообщение...',
                     ),
                     onSubmitted: (text) {
-                      ref.read(chatProvider.notifier).sendMessage(user, text);
+                      ref
+                          .read(chatProvider.notifier)
+                          .sendMessage(widget.user, text);
                       Focus.of(context).unfocus();
                     },
                   ),
