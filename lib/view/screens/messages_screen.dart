@@ -4,8 +4,11 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:intl/intl.dart';
 
 import '../../model/message.dart';
+import '../../model/radius.dart';
 import '../../model/user.dart';
 import '../../view_model/providers/chat_provider.dart';
+import '../../view_model/widgets/left_chat_bubble.dart';
+import '../../view_model/widgets/right_chat_bubble.dart';
 
 class MessagesScreen extends ConsumerWidget {
   const MessagesScreen({super.key, required this.user});
@@ -58,49 +61,70 @@ class MessagesScreen extends ConsumerWidget {
                 final isMe = message.isOutgoing;
                 final now = message.timestamp;
                 String formattedTime = DateFormat.Hm().format(now);
+                // userMessages.sort((a, b) {
+                //   print(a.timestamp);
+                //   print(b.timestamp);
+                //   return b.timestamp.compareTo(a.timestamp);
+                // });
 
-                return Container(
-                  width: 200,
-                  constraints: const BoxConstraints(maxWidth: 220),
-                  decoration: BoxDecoration(
-                    color: isMe
-                        ? theme.colorScheme.secondaryContainer
-                        : user.color.withOpacity(.5),
-                    borderRadius: BorderRadius.only(
-                      topLeft: const Radius.circular(12),
-                      topRight: const Radius.circular(12),
-                      bottomLeft:
-                          isMe ? Radius.zero : const Radius.circular(12),
-                      bottomRight:
-                          !isMe ? Radius.zero : const Radius.circular(12),
-                    ),
-                  ),
-                  padding:
-                      const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
-                  // Граница вокруг окна сообщения.
-                  margin:
-                      const EdgeInsets.symmetric(vertical: 4, horizontal: 12),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        message.text,
-                        // Небольшой межстрочный интервал
-                        style: const TextStyle(height: 1.3),
-                        softWrap: true,
+                return Column(
+                  crossAxisAlignment:
+                      isMe ? CrossAxisAlignment.start : CrossAxisAlignment.end,
+                  children: [
+                    ClipPath(
+                      clipper: isMe
+                          ? LeftChatBubble(
+                              largeRadius: largeRadius,
+                              smallRadius: smallRadius,
+                            )
+                          : RightChatBubble(
+                              largeRadius: largeRadius,
+                              smallRadius: smallRadius,
+                            ),
+                      child: Container(
+                        constraints: const BoxConstraints(maxWidth: 300),
+                        // width: 300,
+                        height: 52,
+                        color: isMe
+                            ? theme.colorScheme.secondaryContainer
+                            : user.color.withOpacity(.5),
+                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                        child: isMe
+                            ? Row(
+                                children: [
+                                  const SizedBox(width: 24),
+                                  Text(
+                                    message.text,
+                                    style: const TextStyle(height: 1.3),
+                                    softWrap: true,
+                                  ),
+                                  const Spacer(),
+                                  Text(formattedTime),
+                                  const SizedBox(width: 6),
+                                  if (isMe)
+                                    Image.asset('assets/icons/Read.png'),
+                                ],
+                              )
+                            : Row(
+                                children: [
+                                  Text(
+                                    message.text,
+                                    style: const TextStyle(height: 1.3),
+                                    softWrap: true,
+                                  ),
+                                  const Spacer(),
+                                  Text(formattedTime),
+                                  const SizedBox(width: 6),
+                                  if (isMe)
+                                    Image.asset('assets/icons/Read.png'),
+                                  const SizedBox(width: 20),
+                                ],
+                              ),
                       ),
-                      Text(formattedTime),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(height: 4),
+                  ],
                 );
-                // ListTile(
-                //   title: Text(
-                //     message.text,
-                //     textAlign:
-                //         message.isOutgoing ? TextAlign.left : TextAlign.right,
-                //   ),
-                //   trailing: Text(message.timestamp.toString()),
-                // );
               },
             ),
           ),
