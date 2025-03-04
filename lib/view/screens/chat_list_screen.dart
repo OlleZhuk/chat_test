@@ -17,6 +17,7 @@ class ChatListScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Чаты'),
         actions: [
+          // Кнопка разработчика для очистки списка чатов
           IconButton(
             onPressed: () => ref.read(chatProvider.notifier).clearChat(),
             icon: const Icon(Icons.refresh),

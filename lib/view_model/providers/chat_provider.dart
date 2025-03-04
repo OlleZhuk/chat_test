@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive/hive.dart';
 
@@ -40,21 +39,22 @@ class ChatNotifier extends StateNotifier<List<User>> {
 
   void clearChat() {
     final usersBox = hiveBoxes['users'] as Box<User>;
+    final messagesBox = hiveBoxes['messages'] as Box<Message>;
     usersBox.clear();
+    messagesBox.clear();
     loadChats(); // Обновляем состояние
   }
 
   void sendMessage(User user, String text) {
     final messagesBox = hiveBoxes['messages'] as Box<Message>;
-    final id = UniqueKey();
+    // final id = UniqueKey();
     final message = Message(
-      id,
-      user.lastName,
+      user.id,
       text,
       '',
       '',
       DateTime.now(),
-      true,
+      true, // исходящее
     ); // Исходящее сообщение
     messagesBox.add(message);
     // Можно добавить логику для обновления UI

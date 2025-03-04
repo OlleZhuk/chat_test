@@ -17,35 +17,32 @@ class MessageAdapter extends TypeAdapter<Message> {
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
     return Message(
-      fields[0] as UniqueKey,
+      fields[0] as String,
       fields[1] as String,
       fields[2] as String,
       fields[3] as String,
-      fields[4] as String,
-      fields[5] as DateTime,
-      fields[6] as bool,
-    )..isRead = fields[7] as bool;
+      fields[4] as DateTime,
+      fields[5] as bool,
+    )..isRead = fields[6] as bool;
   }
 
   @override
   void write(BinaryWriter writer, Message obj) {
     writer
-      ..writeByte(8)
-      ..writeByte(0)
-      ..write(obj.id)
-      ..writeByte(1)
-      ..write(obj.senderId)
-      ..writeByte(2)
-      ..write(obj.text)
-      ..writeByte(3)
-      ..write(obj.filePath)
-      ..writeByte(4)
-      ..write(obj.fileType)
-      ..writeByte(5)
-      ..write(obj.timestamp)
-      ..writeByte(6)
-      ..write(obj.isOutgoing)
       ..writeByte(7)
+      ..writeByte(0)
+      ..write(obj.userId)
+      ..writeByte(1)
+      ..write(obj.text)
+      ..writeByte(2)
+      ..write(obj.filePath)
+      ..writeByte(3)
+      ..write(obj.fileType)
+      ..writeByte(4)
+      ..write(obj.timestamp)
+      ..writeByte(5)
+      ..write(obj.isOutgoing)
+      ..writeByte(6)
       ..write(obj.isRead);
   }
 
