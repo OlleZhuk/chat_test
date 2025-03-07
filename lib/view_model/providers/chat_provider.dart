@@ -18,6 +18,48 @@ final chatProvider = StateNotifierProvider<ChatNotifier, List<User>>((ref) {
   return ChatNotifier(hiveBoxes);
 });
 
+// Провайдер для управления состоянием сообщений
+final messageProvider =
+    StateNotifierProvider<MessageNotifier, List<Message>>((ref) {
+  final hiveBoxes = ref.watch(hiveProvider);
+  return MessageNotifier(hiveBoxes);
+});
+
+class MessageNotifier extends StateNotifier<List<Message>> {
+  final Map<String, Box> hiveBoxes;
+
+  MessageNotifier(this.hiveBoxes) : super([]) {
+    loadMessages();
+  }
+
+  void loadMessages() {
+    final messagesBox = hiveBoxes['messages'] as Box<Message>;
+    state = messagesBox.values.toList();
+  }
+
+  Future<void> sendMessage(User user, String text) async {
+    if (text.trim().isEmpty) return;
+
+    final messagesBox = hiveBoxes['messages'] as Box<Message>;
+
+    // Создаем новое сообщение
+    final message = Message(
+      user.id, // userId
+      text, // text
+      '', // imageUrl (если нужно)
+      '', // audioUrl (если нужно)
+      DateTime.now(), // timestamp
+      true, // isOutgoing
+    );
+
+    // Сохраняем сообщение в Hive
+    await messagesBox.add(message);
+
+    // Обновляем состояние сообщений
+    loadMessages();
+  }
+}
+
 class ChatNotifier extends StateNotifier<List<User>> {
   final Map<String, Box> hiveBoxes;
 
@@ -45,18 +87,18 @@ class ChatNotifier extends StateNotifier<List<User>> {
     loadChats(); // Обновляем состояние
   }
 
-  void sendMessage(User user, String text) {
-    final messagesBox = hiveBoxes['messages'] as Box<Message>;
-    // final id = UniqueKey();
-    final message = Message(
-      user.id,
-      text,
-      '',
-      '',
-      DateTime.now(),
-      true, // исходящее
-    ); // Исходящее сообщение
-    messagesBox.add(message);
-    // Можно добавить логику для обновления UI
-  }
+  // void sendMessage(User user, String text) async {
+  //   final messagesBox = hiveBoxes['messages'] as Box<Message>;
+  //   final message = Message(
+  //     user.id,
+  //     text,
+  //     '',
+  //     '',
+  //     DateTime.now(),
+  //     true, // исходящее
+  //   ); // Исходящее сообщение
+  //   await messagesBox.add(message);
+  //   // Можно добавить логику для обновления UI
+  //   loadChats();
+  // }
 }

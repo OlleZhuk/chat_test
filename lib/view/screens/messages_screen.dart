@@ -42,7 +42,6 @@ class MessagesScreen extends StatelessWidget {
         ),
       ),
       body: Column(
-        // mainAxisSize: MainAxisSize.min,
         children: [
           _OutputTextMessages(user: user),
           _InputTextMessage(user: user),
@@ -88,16 +87,16 @@ class MessagesScreen extends StatelessWidget {
 }
 
 /// ВЫВОД СООБЩЕНИЙ ===>
-class _OutputTextMessages extends StatefulWidget {
+class _OutputTextMessages extends ConsumerStatefulWidget {
   const _OutputTextMessages({required this.user});
 
   final User user;
 
   @override
-  State<_OutputTextMessages> createState() => _OutputTextMessagesState();
+  _OutputTextMessagesState createState() => _OutputTextMessagesState();
 }
 
-class _OutputTextMessagesState extends State<_OutputTextMessages> {
+class _OutputTextMessagesState extends ConsumerState<_OutputTextMessages> {
   final ScrollController _scrollController = ScrollController();
 
   @override
@@ -112,12 +111,12 @@ class _OutputTextMessagesState extends State<_OutputTextMessages> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final messagesBox = Hive.box<Message>('messages');
+    final messages = ref.watch(messageProvider);
+    // final messagesBox = Hive.box<Message>('messages');
 
     // Фильтр сообщений по userId
-    final userMessages = messagesBox.values
-        .where((message) => message.userId == widget.user.id)
-        .toList();
+    final userMessages =
+        messages.where((message) => message.userId == widget.user.id).toList();
 
     // Сортировка сообщений по времени (новые снизу)
     userMessages.sort((a, b) => b.timestamp.compareTo(a.timestamp));
@@ -168,7 +167,7 @@ class _OutputTextMessagesState extends State<_OutputTextMessages> {
                       ),
                 child: Container(
                   constraints: const BoxConstraints(
-                    maxWidth: 300,
+                    maxWidth: 330,
                     minHeight: 52,
                     maxHeight: double.infinity,
                   ),
@@ -177,18 +176,34 @@ class _OutputTextMessagesState extends State<_OutputTextMessages> {
                       : widget.user.color.withOpacity(.5),
                   child: Padding(
                     padding: !isMe
-                        ? const EdgeInsets.fromLTRB(40, 13, 13, 4)
-                        : const EdgeInsets.fromLTRB(13, 13, 40, 4),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                        ? const EdgeInsets.fromLTRB(40, 13, 13, 13)
+                        : const EdgeInsets.fromLTRB(13, 13, 40, 13),
+                    child: Stack(
                       children: [
-                        Text(message.text),
                         Padding(
-                          padding: isMe
-                              ? const EdgeInsets.only(left: 190)
-                              : const EdgeInsets.only(left: 190),
+                          padding: const EdgeInsets.only(bottom: 4.0),
+                          child: RichText(
+                            text: TextSpan(
+                              children: [
+                                TextSpan(text: message.text),
+                                WidgetSpan(
+                                  alignment: PlaceholderAlignment.baseline,
+                                  baseline: TextBaseline.alphabetic,
+                                  child: Container(
+                                    width: 60,
+                                    height: 8,
+                                    color: Colors.blue[200],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
                           child: Row(
-                            mainAxisSize: MainAxisSize.min,
+                            // mainAxisSize: MainAxisSize.min,
                             mainAxisAlignment: MainAxisAlignment.end,
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
@@ -204,6 +219,31 @@ class _OutputTextMessagesState extends State<_OutputTextMessages> {
                         ),
                       ],
                     ),
+                    // child: Column(
+                    //   crossAxisAlignment: CrossAxisAlignment.start,
+                    //   children: [
+                    //     Text(message.text),
+                    //     Padding(
+                    //       padding: isMe
+                    //           ? const EdgeInsets.only(left: 190)
+                    //           : const EdgeInsets.only(left: 190),
+                    //       child: Row(
+                    //         mainAxisSize: MainAxisSize.min,
+                    //         mainAxisAlignment: MainAxisAlignment.end,
+                    //         crossAxisAlignment: CrossAxisAlignment.end,
+                    //         children: [
+                    //           Text(formattedTime),
+                    //           if (isMe)
+                    //             Padding(
+                    //               padding:
+                    //                   const EdgeInsets.only(bottom: 4, left: 4),
+                    //               child: Image.asset('assets/icons/Read.png'),
+                    //             ),
+                    //         ],
+                    //       ),
+                    //     ),
+                    //   ],
+                    // ),
                   ),
                 ),
               ),
@@ -258,12 +298,12 @@ class InputTextMessageState extends ConsumerState<_InputTextMessage> {
 
     if (enteredTextMessage.trim().isEmpty) return;
 
+    ref
+        .read(messageProvider.notifier)
+        .sendMessage(widget.user, enteredTextMessage);
+
     FocusScope.of(context).unfocus();
     _textController.clear();
-
-    ref
-        .read(chatProvider.notifier)
-        .sendMessage(widget.user, enteredTextMessage);
   }
 
   /// Метод отправки сообщения с клавиатуры:
@@ -289,7 +329,7 @@ class InputTextMessageState extends ConsumerState<_InputTextMessage> {
               maxLines: null, // Многострочный режим
               textCapitalization: TextCapitalization.sentences,
               decoration: const InputDecoration(
-                // constraints: BoxConstraints(maxWidth: 280),
+                constraints: BoxConstraints(maxHeight: 180),
                 hintText: 'Сообщение...',
                 filled: false,
                 border: OutlineInputBorder(
