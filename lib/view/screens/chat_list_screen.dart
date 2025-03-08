@@ -69,12 +69,4 @@ class ChatListScreen extends ConsumerWidget {
       ),
     );
   }
-
-  void _addContact(BuildContext context) {
-    // Реализация добавления нового контакта
-  }
-
-  void _logout(BuildContext context) {
-    // Реализация выхода из системы
-  }
 }

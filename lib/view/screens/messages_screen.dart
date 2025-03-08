@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:intl/intl.dart';
 
+import '../../model/dev_data/dev_data.dart';
 import '../../model/message.dart';
 import '../../model/chat_bubble_radius.dart';
 import '../../model/user.dart';
@@ -49,41 +50,6 @@ class MessagesScreen extends StatelessWidget {
       ),
     );
   }
-
-  /// Метод для определения форм чат-баблов
-  BorderRadius _getBorderRadius(
-    bool isFirstInGroup,
-    bool isLastInGroup,
-    // bool isSingleInGroup,
-  ) {
-    const radius = Radius.circular(26);
-
-    if (isLastInGroup) {
-      // Последнее сообщение в группе
-      return BorderRadius.only(
-        topLeft: radius,
-        topRight: radius,
-        bottomLeft: isFirstInGroup ? radius : Radius.zero,
-        bottomRight: radius,
-      );
-    } else if (isFirstInGroup) {
-      // Первое сообщение в группе
-      return const BorderRadius.only(
-        topLeft: radius,
-        topRight: radius,
-        bottomLeft: radius,
-        bottomRight: radius,
-      );
-    } else {
-      // Сообщение в середине группы
-      return const BorderRadius.only(
-        topLeft: radius,
-        topRight: radius,
-        bottomLeft: radius,
-        bottomRight: Radius.zero,
-      );
-    }
-  }
 }
 
 /// ВЫВОД СООБЩЕНИЙ ===>
@@ -110,147 +76,145 @@ class _OutputTextMessagesState extends ConsumerState<_OutputTextMessages> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final messages = ref.watch(messageProvider);
-    // final messagesBox = Hive.box<Message>('messages');
+    ref.watch(messageProvider);
+    final dialogMessages =
+        ref.read(messageProvider.notifier).getMessagesForDialog(widget.user.id);
 
-    // Фильтр сообщений по userId
-    final userMessages =
-        messages.where((message) => message.userId == widget.user.id).toList();
+    /// Сортировка сообщений по времени (новые снизу)
+    dialogMessages.sort((a, b) => b.timestamp.compareTo(a.timestamp));
 
-    // Сортировка сообщений по времени (новые снизу)
-    userMessages.sort((a, b) => b.timestamp.compareTo(a.timestamp));
-
-    // Группировка сообщений по пользователям, чтобы выявлять цепочки
-    // сообщений, в которых будут отличаться формы чат-баблов
-    final Map<String, List<Message>> groupedMessages = {};
-    for (var message in userMessages) {
-      final userId = message.userId;
-      if (!groupedMessages.containsKey(userId)) {
-        groupedMessages[userId] = [];
-      }
-      groupedMessages[userId]!.add(message);
-    }
+    /// Перегруппировка сообщений на исходящие и входящие
+    final outgoingMessages =
+        dialogMessages.where((message) => message.isOutgoing).toList();
+    final incomingMessages =
+        dialogMessages.where((message) => !message.isOutgoing).toList();
 
     return Expanded(
       child: ListView.builder(
         controller: _scrollController,
         reverse: true,
-        itemCount: userMessages.length,
+        itemCount: dialogMessages.length,
         itemBuilder: (context, index) {
-          final message = userMessages[index];
-          final isMe = message.isOutgoing;
-          final userId = message.userId;
+          final Message message = dialogMessages[index];
+          final bool isOutgoing = message.isOutgoing;
+          final List<Message> group =
+              isOutgoing ? outgoingMessages : incomingMessages;
 
-          final messageGroup = groupedMessages[userId]!;
-          final isFirstInGroup = message == messageGroup.first;
-          final isLastInGroup = message == messageGroup.last;
-          // final isSingleInGroup = message == messageGroup.single;
-
-          final now = message.timestamp;
+          /// включен реверс, поэтому выравниваем last == first,
+          /// получаем isLastInGroup это первое снизу
+          final bool isLastInGroup = message == group.first;
+          // final bool isFirstInGroup = message == group.last;
+          final DateTime now = message.timestamp;
           String formattedTime = DateFormat.Hm().format(now);
 
-          return Column(
-            // mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment:
-                !isMe ? CrossAxisAlignment.start : CrossAxisAlignment.end,
-            children: [
-              ClipPath(
-                clipper: !isMe
-                    ? LeftChatBubble(
-                        largeRadius: largeRadius,
-                        smallRadius: smallRadius,
-                      )
-                    : RightChatBubble(
-                        largeRadius: largeRadius,
-                        smallRadius: smallRadius,
-                      ),
-                child: Container(
-                  constraints: const BoxConstraints(
-                    maxWidth: 330,
-                    minHeight: 52,
-                    maxHeight: double.infinity,
-                  ),
-                  color: isMe
-                      ? theme.colorScheme.secondaryContainer
-                      : widget.user.color.withOpacity(.5),
-                  child: Padding(
-                    padding: !isMe
-                        ? const EdgeInsets.fromLTRB(40, 13, 13, 13)
-                        : const EdgeInsets.fromLTRB(13, 13, 40, 13),
-                    child: Stack(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 4.0),
-                          child: RichText(
-                            text: TextSpan(
-                              children: [
-                                TextSpan(text: message.text),
-                                WidgetSpan(
-                                  alignment: PlaceholderAlignment.baseline,
-                                  baseline: TextBaseline.alphabetic,
-                                  child: Container(
-                                    width: 60,
-                                    height: 8,
-                                    color: Colors.blue[200],
-                                  ),
-                                ),
-                              ],
+          return Padding(
+            /// наружные для сообщения
+            padding: EdgeInsets.symmetric(
+              vertical: 4.0,
+              horizontal:
+
+                  /// для нижнего - малый, для остальных - с добавкой:
+                  isLastInGroup ? smallRadius : smallRadius + largeRadius,
+            ),
+            child: Align(
+              alignment:
+                  isOutgoing ? Alignment.centerRight : Alignment.centerLeft,
+              child: isLastInGroup
+
+                  /// для нижнего - чат-бабл,
+                  /// для остальных - обычные закругления контейнера
+                  ? ClipPath(
+                      clipper: isOutgoing
+                          ? RightChatBubble(
+                              largeRadius: largeRadius,
+                              smallRadius: smallRadius,
+                            )
+                          : LeftChatBubble(
+                              largeRadius: largeRadius,
+                              smallRadius: smallRadius,
                             ),
-                          ),
-                        ),
-                        Positioned(
-                          bottom: 0,
-                          right: 0,
-                          child: Row(
-                            // mainAxisSize: MainAxisSize.min,
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Text(formattedTime),
-                              if (isMe)
-                                Padding(
-                                  padding:
-                                      const EdgeInsets.only(bottom: 4, left: 4),
-                                  child: Image.asset('assets/icons/Read.png'),
-                                ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    // child: Column(
-                    //   crossAxisAlignment: CrossAxisAlignment.start,
-                    //   children: [
-                    //     Text(message.text),
-                    //     Padding(
-                    //       padding: isMe
-                    //           ? const EdgeInsets.only(left: 190)
-                    //           : const EdgeInsets.only(left: 190),
-                    //       child: Row(
-                    //         mainAxisSize: MainAxisSize.min,
-                    //         mainAxisAlignment: MainAxisAlignment.end,
-                    //         crossAxisAlignment: CrossAxisAlignment.end,
-                    //         children: [
-                    //           Text(formattedTime),
-                    //           if (isMe)
-                    //             Padding(
-                    //               padding:
-                    //                   const EdgeInsets.only(bottom: 4, left: 4),
-                    //               child: Image.asset('assets/icons/Read.png'),
-                    //             ),
-                    //         ],
-                    //       ),
-                    //     ),
-                    //   ],
-                    // ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 6)
-            ],
+                      child: messContainer(
+                          isLastInGroup, isOutgoing, message, formattedTime),
+                    )
+                  : messContainer(
+                      isLastInGroup, isOutgoing, message, formattedTime),
+            ),
           );
         },
+      ),
+    );
+  }
+
+  Container messContainer(
+    bool isLast,
+    bool isOutgoing,
+    Message message,
+    String formattedTime,
+  ) {
+    final theme = Theme.of(context);
+    const maxRadius = Radius.circular(largeRadius);
+    const minRadius = Radius.circular(smallRadius);
+    return Container(
+      constraints: const BoxConstraints(
+        maxWidth: 330,
+        minHeight: largeRadius * 2,
+        maxHeight: double.infinity,
+      ),
+      decoration: BoxDecoration(
+        color: isOutgoing
+            ? theme.colorScheme.secondaryContainer
+            : widget.user.color.withOpacity(.5),
+        borderRadius: isLast
+            ? null
+            : BorderRadius.only(
+                topLeft: maxRadius,
+                topRight: maxRadius,
+                bottomLeft: !isOutgoing ? minRadius : maxRadius,
+                bottomRight: isOutgoing ? minRadius : maxRadius,
+              ),
+      ),
+      child: Padding(
+        /// отступы для текста нижнего сообщения и остальных
+        padding: isOutgoing
+            ? isLast
+                ? const EdgeInsets.fromLTRB(13, 13, 36, 13)
+                : const EdgeInsets.all(13)
+            : const EdgeInsets.fromLTRB(36, 13, 13, 13),
+        child: Stack(
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4.0),
+              child: RichText(
+                text: TextSpan(
+                  children: [
+                    TextSpan(text: message.text),
+                    const WidgetSpan(
+                      alignment: PlaceholderAlignment.baseline,
+                      baseline: TextBaseline.alphabetic,
+                      child: SizedBox(width: 60, height: 8),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Positioned(
+              bottom: 0,
+              right: 0,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(formattedTime),
+                  if (isOutgoing)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4, left: 4),
+                      child: Image.asset('assets/icons/Read.png'),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -306,7 +270,7 @@ class InputTextMessageState extends ConsumerState<_InputTextMessage> {
     _textController.clear();
   }
 
-  /// Метод отправки сообщения с клавиатуры:
+  /// Возможный метод отправки с клавиатуры:
   // void _onSubmitted(String value) {
   //   if (value.isNotEmpty) submitMessage();
   // }
@@ -345,7 +309,7 @@ class InputTextMessageState extends ConsumerState<_InputTextMessage> {
             ),
           ),
 
-          // При наборе текста вместо кн. микрофона появляется кн. Отправить
+          /// При наборе текста вместо кн. микрофона появляется кн. Отправить
           _isButtonVisible
               ? IconButton(
                   icon: const Icon(Icons.send),

@@ -1,2 +1,2 @@
-const double largeRadius = 26; // Большое закругление
-const double smallRadius = 13; // Малое закругление
+const double largeRadius = 24; // Большое закругление
+const double smallRadius = 8; // Малое закругление
