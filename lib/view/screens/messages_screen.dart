@@ -74,70 +74,93 @@ class _OutputTextMessagesState extends ConsumerState<_OutputTextMessages> {
 
   @override
   Widget build(BuildContext context) {
+    /// Подписка на изменения в messageProvider
+    /// (реактивное обновление экрана)
     ref.watch(messageProvider);
+
+    /// Выборка сообщений для текущего диалога
     final dialogMessages =
         ref.read(messageProvider.notifier).getMessagesForDialog(widget.user.id);
 
     /// Сортировка сообщений по времени (новые снизу)
-    dialogMessages.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+    dialogMessages.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+
+    /// Группируем сообщения по датам
+    final groupedMessages = _groupMessagesByDate(dialogMessages);
 
     /// Перегруппировка сообщений на исходящие и входящие
-    final outgoingMessages =
-        dialogMessages.where((message) => message.isOutgoing).toList();
-    final incomingMessages =
-        dialogMessages.where((message) => !message.isOutgoing).toList();
+    // final outgoingMessages =
+    //     dialogMessages.where((message) => message.isOutgoing).toList();
+    // final incomingMessages =
+    //     dialogMessages.where((message) => !message.isOutgoing).toList();
 
     return Expanded(
       child: ListView.builder(
         controller: _scrollController,
         reverse: true,
-        itemCount: dialogMessages.length,
+        itemCount: groupedMessages.length,
+        // itemCount: dialogMessages.length,
         itemBuilder: (context, index) {
-          final Message message = dialogMessages[index];
-          final bool isOutgoing = message.isOutgoing;
-          final List<Message> group =
-              isOutgoing ? outgoingMessages : incomingMessages;
+          // final Message message = dialogMessages[index];
+          final item = groupedMessages[index];
+          //
+          if (item is DateTime) {
+            /// Вызов разделителя с датой
+            return _buildDateDivider(item);
+          } else if (item is Message) {
+            /// Это сообщение
+            final Message message = item;
+            final bool isOutgoing = message.isOutgoing;
+            final List<Message> group = isOutgoing
+                ? dialogMessages.where((m) => m.isOutgoing).toList()
+                : dialogMessages.where((m) => !m.isOutgoing).toList();
 
-          /// включен реверс, поэтому выравниваем last == first,
-          /// получаем isLastInGroup это первое снизу
-          final bool isLastInGroup = message == group.first;
-          // final bool isFirstInGroup = message == group.last;
-          final DateTime now = message.timestamp;
-          String formattedTime = DateFormat.Hm().format(now);
+            // final List<Message> group =
+            //     isOutgoing ? outgoingMessages : incomingMessages;
 
-          return Padding(
-            /// наружные для сообщения
-            padding: EdgeInsets.symmetric(
-              vertical: 4.0,
-              horizontal:
+            /// включен реверс, поэтому выравниваем last == first,
+            /// получаем isLastInGroup как первое снизу
+            final bool isLastInGroup = message == group.last;
+            // final bool isFirstInGroup = message == group.last;
+            final DateTime now = message.timestamp;
+            String formattedTime = DateFormat.Hm().format(now);
 
-                  /// для нижнего - малый, для остальных - с добавкой:
-                  isLastInGroup ? smallRadius : smallRadius + largeRadius,
-            ),
-            child: Align(
-              alignment:
-                  isOutgoing ? Alignment.centerRight : Alignment.centerLeft,
-              child: isLastInGroup
+            return Padding(
+              /// наружные для сообщения
+              padding: EdgeInsets.symmetric(
+                vertical: 4.0,
+                horizontal:
 
-                  /// для нижнего - чат-бабл,
-                  /// для остальных - обычные закругления контейнера
-                  ? ClipPath(
-                      clipper: isOutgoing
-                          ? RightChatBubble(
-                              largeRadius: largeRadius,
-                              smallRadius: smallRadius,
-                            )
-                          : LeftChatBubble(
-                              largeRadius: largeRadius,
-                              smallRadius: smallRadius,
-                            ),
-                      child: messContainer(
-                          isLastInGroup, isOutgoing, message, formattedTime),
-                    )
-                  : messContainer(
-                      isLastInGroup, isOutgoing, message, formattedTime),
-            ),
-          );
+                    /// для нижнего - малый, для остальных - с добавкой:
+                    isLastInGroup ? smallRadius : smallRadius + largeRadius,
+              ),
+              child: Align(
+                alignment:
+                    isOutgoing ? Alignment.centerRight : Alignment.centerLeft,
+                child: isLastInGroup
+
+                    /// для нижнего - чат-бабл,
+                    /// для остальных - обычные закругления контейнера
+                    ? ClipPath(
+                        clipper: isOutgoing
+                            ? RightChatBubble(
+                                largeRadius: largeRadius,
+                                smallRadius: smallRadius,
+                              )
+                            : LeftChatBubble(
+                                largeRadius: largeRadius,
+                                smallRadius: smallRadius,
+                              ),
+                        child: messContainer(
+                            isLastInGroup, isOutgoing, message, formattedTime),
+                      )
+                    : messContainer(
+                        isLastInGroup, isOutgoing, message, formattedTime),
+              ),
+            );
+          } else {
+            return const SizedBox.shrink();
+          }
         },
       ),
     );
@@ -213,6 +236,75 @@ class _OutputTextMessagesState extends ConsumerState<_OutputTextMessages> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  /// Метод группировки сообщений по датам
+  List<dynamic> _groupMessagesByDate(List<Message> messages) {
+    final groupedMessages = <dynamic>[];
+    DateTime? currentDate;
+
+    for (final message in messages) {
+      final messageDate = DateTime(
+        message.timestamp.year,
+        message.timestamp.month,
+        message.timestamp.day,
+      );
+
+      if (currentDate == null || currentDate != messageDate) {
+        // Добавляем разделитель с датой
+        groupedMessages.add(messageDate);
+        currentDate = messageDate;
+      }
+
+      // Добавляем сообщение
+      groupedMessages.add(message);
+    }
+
+    return groupedMessages.reversed.toList();
+  }
+
+  /// Метод построения разделителя с датой
+  Widget _buildDateDivider(DateTime date) {
+    final today = DateTime.now();
+    final yesterday = today.subtract(const Duration(days: 1));
+
+    String dateText;
+
+    if (date.year == today.year &&
+        date.month == today.month &&
+        date.day == today.day) {
+      dateText = 'Сегодня';
+    } else if (date.year == yesterday.year &&
+        date.month == yesterday.month &&
+        date.day == yesterday.day) {
+      dateText = 'Вчера';
+    } else {
+      dateText = DateFormat('dd.MM.yy').format(date);
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: Divider(
+              color: widget.user.color.withOpacity(.5),
+              indent: 13,
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 13),
+            child: Text(dateText),
+          ),
+          Expanded(
+            child: Divider(
+              color: widget.user.color.withOpacity(.5),
+              endIndent: 13,
+            ),
+          ),
+        ],
       ),
     );
   }
