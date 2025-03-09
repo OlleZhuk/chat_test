@@ -68,7 +68,7 @@ class _OutputTextMessagesState extends ConsumerState<_OutputTextMessages> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // с учетом реверса - minScrollExtent
+      //> с учетом реверса - minScrollExtent
       _scrollController.jumpTo(_scrollController.position.minScrollExtent);
     });
   }
