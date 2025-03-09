@@ -1,5 +1,9 @@
+import 'dart:io';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
 import '../../model/message.dart';
@@ -333,6 +337,58 @@ class InputTextMessageState extends ConsumerState<_InputTextMessage> {
     _textController.clear();
   }
 
+//* Выбор фото или видео
+  Future<void> _pickPhotoOrVideo() async {
+    try {
+      final ImagePicker picker = ImagePicker();
+      final XFile? file = await picker.pickImage(source: ImageSource.gallery);
+
+      if (file != null) {
+        // Обработка выбранного фото/видео
+        final File imageFile = File(file.path);
+        print('Выбрано фото/видео: ${imageFile.path}');
+        // Здесь можно добавить логику для отправки файла
+      }
+    } catch (e) {
+      // Обработка исключения
+      _showAlert(context, 'Галерея недоступна');
+    }
+  }
+
+//* Выбор документа или файла
+  Future<void> _pickDocumentOrFile() async {
+    try {
+      final FilePickerResult? result = await FilePicker.platform.pickFiles();
+
+      if (result != null) {
+        // Обработка выбранного файла
+        final File file = File(result.files.single.path!);
+        print('Выбран файл: ${file.path}');
+        // Здесь можно добавить логику для отправки файла
+      }
+    } catch (e) {
+      // Обработка исключения
+      _showAlert(context, 'Файлы недоступны');
+    }
+  }
+
+  /// Показ алерта
+  void _showAlert(BuildContext context, String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Ошибка'),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
   //> Возможный метод отправки с клавиатуры:
   // void _onSubmitted(String value) {
   //   if (value.isNotEmpty) submitMessage();
@@ -353,9 +409,9 @@ class InputTextMessageState extends ConsumerState<_InputTextMessage> {
             onSelected: (value) {
               //> Обработка выбора пункта меню
               if (value == 'photo_or_video') {
-                () {};
+                _pickPhotoOrVideo();
               } else if (value == 'document_or_file') {
-                () {};
+                _pickDocumentOrFile();
               }
             },
             itemBuilder: (BuildContext context) => [
