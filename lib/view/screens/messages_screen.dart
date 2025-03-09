@@ -85,23 +85,15 @@ class _OutputTextMessagesState extends ConsumerState<_OutputTextMessages> {
     /// Сортировка сообщений по времени (новые снизу)
     dialogMessages.sort((a, b) => a.timestamp.compareTo(b.timestamp));
 
-    /// Группируем сообщения по датам
+    /// Группировка сообщений по датам
     final groupedMessages = _groupMessagesByDate(dialogMessages);
-
-    /// Перегруппировка сообщений на исходящие и входящие
-    // final outgoingMessages =
-    //     dialogMessages.where((message) => message.isOutgoing).toList();
-    // final incomingMessages =
-    //     dialogMessages.where((message) => !message.isOutgoing).toList();
 
     return Expanded(
       child: ListView.builder(
         controller: _scrollController,
         reverse: true,
         itemCount: groupedMessages.length,
-        // itemCount: dialogMessages.length,
         itemBuilder: (context, index) {
-          // final Message message = dialogMessages[index];
           final item = groupedMessages[index];
           //
           if (item is DateTime) {
@@ -115,13 +107,7 @@ class _OutputTextMessagesState extends ConsumerState<_OutputTextMessages> {
                 ? dialogMessages.where((m) => m.isOutgoing).toList()
                 : dialogMessages.where((m) => !m.isOutgoing).toList();
 
-            // final List<Message> group =
-            //     isOutgoing ? outgoingMessages : incomingMessages;
-
-            /// включен реверс, поэтому выравниваем last == first,
-            /// получаем isLastInGroup как первое снизу
             final bool isLastInGroup = message == group.last;
-            // final bool isFirstInGroup = message == group.last;
             final DateTime now = message.timestamp;
             String formattedTime = DateFormat.Hm().format(now);
 
@@ -130,8 +116,7 @@ class _OutputTextMessagesState extends ConsumerState<_OutputTextMessages> {
               padding: EdgeInsets.symmetric(
                 vertical: 4.0,
                 horizontal:
-
-                    /// для нижнего - малый, для остальных - с добавкой:
+                    // для нижнего - малый, для остальных - с добавкой:
                     isLastInGroup ? smallRadius : smallRadius + largeRadius,
               ),
               child: Align(
