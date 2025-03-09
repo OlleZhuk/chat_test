@@ -402,7 +402,7 @@ class InputTextMessageState extends ConsumerState<_InputTextMessage> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          //> Кнопка с выпадающим меню
+          //> "Скрепка" с выпадающим меню
           PopupMenuButton<String>(
             offset: const Offset(0, -120),
             icon: Image.asset('assets/icons/Attach.png'),
@@ -439,6 +439,8 @@ class InputTextMessageState extends ConsumerState<_InputTextMessage> {
               ),
             ],
           ),
+          //
+          //> Поле ввода текстового сообщения
           Expanded(
             child: TextField(
               controller: _textController,
@@ -461,18 +463,15 @@ class InputTextMessageState extends ConsumerState<_InputTextMessage> {
               //> -----------------------------------------------
             ),
           ),
-
-          //> При наборе текста вместо кн. микрофона появляется кн. Отправить
+          //
+          //> Либо микрофон, либо Отправить (меняются при наборе текста)
           _isButtonVisible
               ? IconButton(
                   icon: const Icon(Icons.send),
                   onPressed: submitMessage,
                 )
               : IconButton(
-                  icon: Image.asset(
-                    'assets/icons/Audio.png',
-                    scale: .8,
-                  ),
+                  icon: Image.asset('assets/icons/Audio.png', scale: .8),
                   onPressed: () {},
                 ),
         ],
