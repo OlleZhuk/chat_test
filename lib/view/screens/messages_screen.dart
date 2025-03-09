@@ -151,15 +151,12 @@ class _OutputTextMessagesState extends ConsumerState<_OutputTextMessages> {
   }
 
   //* Метод отрисовки сообщений
-  Container _buildMessageContainer(
-    bool isLast,
-    bool isOutgoing,
-    Message message,
-    String formattedTime,
-  ) {
+  _buildMessageContainer(
+      bool isLast, bool isOutgoing, Message message, String formattedTime) {
     final theme = Theme.of(context);
     const maxRadius = Radius.circular(largeRadius);
     const minRadius = Radius.circular(smallRadius);
+    //
     return Container(
       constraints: const BoxConstraints(
         maxWidth: 330,
@@ -226,7 +223,7 @@ class _OutputTextMessagesState extends ConsumerState<_OutputTextMessages> {
   }
 
   //* Метод группировки сообщений по датам
-  List<dynamic> _groupMessagesByDate(List<Message> messages) {
+  _groupMessagesByDate(List<Message> messages) {
     final groupedMessages = <dynamic>[];
     DateTime? currentDate;
 
@@ -251,7 +248,7 @@ class _OutputTextMessagesState extends ConsumerState<_OutputTextMessages> {
   }
 
   //* Метод построения разделителя с датой
-  Widget _buildDateDivider(DateTime date) {
+  _buildDateDivider(DateTime date) {
     final divColor = widget.user.color.withOpacity(.5);
     final today = DateTime.now();
     final yesterday = today.subtract(const Duration(days: 1));
@@ -349,9 +346,42 @@ class InputTextMessageState extends ConsumerState<_InputTextMessage> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          IconButton(
+          //> Кнопка с выпадающим меню
+          PopupMenuButton<String>(
+            offset: const Offset(0, -120),
             icon: Image.asset('assets/icons/Attach.png'),
-            onPressed: () {},
+            onSelected: (value) {
+              //> Обработка выбора пункта меню
+              if (value == 'photo_or_video') {
+                () {};
+              } else if (value == 'document_or_file') {
+                () {};
+              }
+            },
+            itemBuilder: (BuildContext context) => [
+              PopupMenuItem<String>(
+                value: 'photo_or_video',
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Image.asset('assets/icons/Img.png'),
+                    const SizedBox(width: 13),
+                    const Text('Фото или видео'),
+                  ],
+                ),
+              ),
+              PopupMenuItem<String>(
+                value: 'document_or_file',
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Image.asset('assets/icons/Attachment.png'),
+                    const SizedBox(width: 13),
+                    const Text('Документ или файл'),
+                  ],
+                ),
+              ),
+            ],
           ),
           Expanded(
             child: TextField(
