@@ -51,6 +51,7 @@ class MessagesScreen extends StatelessWidget {
 }
 
 /// ВЫВОД СООБЩЕНИЙ ===>
+
 class _OutputTextMessages extends ConsumerStatefulWidget {
   const _OutputTextMessages({required this.user});
 
@@ -74,18 +75,18 @@ class _OutputTextMessagesState extends ConsumerState<_OutputTextMessages> {
 
   @override
   Widget build(BuildContext context) {
-    /// Подписка на изменения в messageProvider
-    /// (реактивное обновление экрана)
+    //> Подписка на изменения в messageProvider
+    //> (реактивное обновление экрана)
     ref.watch(messageProvider);
 
-    /// Выборка сообщений для текущего диалога
+    //> Выборка сообщений для текущего диалога
     final dialogMessages =
         ref.read(messageProvider.notifier).getMessagesForDialog(widget.user.id);
 
-    /// Сортировка сообщений по времени (новые снизу)
+    //> Сортировка сообщений по времени (новые снизу)
     dialogMessages.sort((a, b) => a.timestamp.compareTo(b.timestamp));
 
-    /// Группировка сообщений по датам
+    //> Группировка сообщений по датам
     final groupedMessages = _groupMessagesByDate(dialogMessages);
 
     return Expanded(
@@ -95,12 +96,11 @@ class _OutputTextMessagesState extends ConsumerState<_OutputTextMessages> {
         itemCount: groupedMessages.length,
         itemBuilder: (context, index) {
           final item = groupedMessages[index];
-          //
+          //> Или разделитель с датой
           if (item is DateTime) {
-            /// Вызов разделителя с датой
             return _buildDateDivider(item);
           } else if (item is Message) {
-            /// Это сообщение
+            //> Или сообщение
             final Message message = item;
             final bool isOutgoing = message.isOutgoing;
             final List<Message> group = isOutgoing
@@ -112,20 +112,19 @@ class _OutputTextMessagesState extends ConsumerState<_OutputTextMessages> {
             String formattedTime = DateFormat.Hm().format(now);
 
             return Padding(
-              /// наружные для сообщения
+              //> наружные для сообщения
               padding: EdgeInsets.symmetric(
                 vertical: 4.0,
                 horizontal:
-                    // для нижнего - малый, для остальных - с добавкой:
+                    //> для нижнего - малый, для остальных - с добавкой:
                     isLastInGroup ? smallRadius : smallRadius + largeRadius,
               ),
               child: Align(
                 alignment:
                     isOutgoing ? Alignment.centerRight : Alignment.centerLeft,
                 child: isLastInGroup
-
-                    /// для нижнего - чат-бабл,
-                    /// для остальных - обычные закругления контейнера
+                    //> для нижнего - чат-бабл,
+                    //> для остальных - обычные закругления контейнера
                     ? ClipPath(
                         clipper: isOutgoing
                             ? RightChatBubble(
@@ -136,10 +135,10 @@ class _OutputTextMessagesState extends ConsumerState<_OutputTextMessages> {
                                 largeRadius: largeRadius,
                                 smallRadius: smallRadius,
                               ),
-                        child: messContainer(
+                        child: _buildMessageContainer(
                             isLastInGroup, isOutgoing, message, formattedTime),
                       )
-                    : messContainer(
+                    : _buildMessageContainer(
                         isLastInGroup, isOutgoing, message, formattedTime),
               ),
             );
@@ -151,7 +150,8 @@ class _OutputTextMessagesState extends ConsumerState<_OutputTextMessages> {
     );
   }
 
-  Container messContainer(
+  //* Метод отрисовки сообщений
+  Container _buildMessageContainer(
     bool isLast,
     bool isOutgoing,
     Message message,
@@ -180,7 +180,7 @@ class _OutputTextMessagesState extends ConsumerState<_OutputTextMessages> {
               ),
       ),
       child: Padding(
-        /// отступы для текста нижнего сообщения и остальных
+        //> отступы для текста нижнего сообщения и остальных
         padding: isOutgoing
             ? isLast
                 ? const EdgeInsets.fromLTRB(13, 13, 36, 13)
@@ -225,7 +225,7 @@ class _OutputTextMessagesState extends ConsumerState<_OutputTextMessages> {
     );
   }
 
-  /// Метод группировки сообщений по датам
+  //* Метод группировки сообщений по датам
   List<dynamic> _groupMessagesByDate(List<Message> messages) {
     final groupedMessages = <dynamic>[];
     DateTime? currentDate;
@@ -250,8 +250,9 @@ class _OutputTextMessagesState extends ConsumerState<_OutputTextMessages> {
     return groupedMessages.reversed.toList();
   }
 
-  /// Метод построения разделителя с датой
+  //* Метод построения разделителя с датой
   Widget _buildDateDivider(DateTime date) {
+    final divColor = widget.user.color.withOpacity(.5);
     final today = DateTime.now();
     final yesterday = today.subtract(const Duration(days: 1));
 
@@ -273,22 +274,12 @@ class _OutputTextMessagesState extends ConsumerState<_OutputTextMessages> {
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
-          Expanded(
-            child: Divider(
-              color: widget.user.color.withOpacity(.5),
-              indent: 13,
-            ),
-          ),
+          Expanded(child: Divider(color: divColor, indent: 13)),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 13),
             child: Text(dateText),
           ),
-          Expanded(
-            child: Divider(
-              color: widget.user.color.withOpacity(.5),
-              endIndent: 13,
-            ),
-          ),
+          Expanded(child: Divider(color: divColor, endIndent: 13)),
         ],
       ),
     );
@@ -324,14 +315,14 @@ class InputTextMessageState extends ConsumerState<_InputTextMessage> {
     super.dispose();
   }
 
-  /// Кнопка отправки появляется...
+  //> Кнопка отправки появляется...
   void _updateButtonVisibility() {
     setState(
       () => _isButtonVisible = _textController.text.isNotEmpty,
     );
   }
 
-  /// Метод отправки сообщения:
+  //* Метод отправки сообщения:
   void submitMessage() async {
     final enteredTextMessage = _textController.text;
 
@@ -345,10 +336,11 @@ class InputTextMessageState extends ConsumerState<_InputTextMessage> {
     _textController.clear();
   }
 
-  /// Возможный метод отправки с клавиатуры:
+  //> Возможный метод отправки с клавиатуры:
   // void _onSubmitted(String value) {
   //   if (value.isNotEmpty) submitMessage();
   // }
+  //> --------------------------------------
 
   @override
   Widget build(BuildContext context) {
@@ -376,15 +368,15 @@ class InputTextMessageState extends ConsumerState<_InputTextMessage> {
                 ),
               ),
 
-              /// Как возможный вариант - поменять Enter на Done
-              /// для отправки сообщения с клавиатуры
+              //> Как возможный вариант - поменять Enter на Done
+              //> для отправки сообщения с клавиатуры
               // textInputAction: TextInputAction.done,
               // onSubmitted: _onSubmitted, // Обработчик нажатия
-              /// ------------------------------------
+              //> -----------------------------------------------
             ),
           ),
 
-          /// При наборе текста вместо кн. микрофона появляется кн. Отправить
+          //> При наборе текста вместо кн. микрофона появляется кн. Отправить
           _isButtonVisible
               ? IconButton(
                   icon: const Icon(Icons.send),
