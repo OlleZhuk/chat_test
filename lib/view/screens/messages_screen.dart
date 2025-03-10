@@ -14,10 +14,10 @@ import '../../model/message.dart';
 import '../../model/chat_bubble_radius.dart';
 import '../../model/user.dart';
 import '../../view_model/providers/chat_provider.dart';
-import '../../view_model/widgets/audio_player.dart';
-import '../../view_model/widgets/left_chat_bubble.dart';
-import '../../view_model/widgets/right_chat_bubble.dart';
-import '../../view_model/widgets/video_player.dart';
+import '../../view_model/widgets/player_audio.dart';
+import '../../view_model/widgets/chat_bubble_left.dart';
+import '../../view_model/widgets/chat_bubble_right.dart';
+import '../../view_model/widgets/player_video_.dart';
 
 class MessagesScreen extends StatelessWidget {
   const MessagesScreen({super.key, required this.user});
