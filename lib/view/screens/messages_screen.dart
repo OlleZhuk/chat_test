@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import '../../model/message.dart';
 import '../../model/chat_bubble_radius.dart';
@@ -337,38 +338,66 @@ class InputTextMessageState extends ConsumerState<_InputTextMessage> {
     _textController.clear();
   }
 
-//* Выбор фото или видео
+//* Метод выбора фото или видео с запросом разрешения
   Future<void> _pickPhotoOrVideo() async {
-    try {
-      final ImagePicker picker = ImagePicker();
-      final XFile? file = await picker.pickImage(source: ImageSource.gallery);
+    //> Запрос разрешения на доступ к хранилищу
+    final status = await Permission.storage.request();
 
-      if (file != null) {
-        // Обработка выбранного фото/видео
-        final File imageFile = File(file.path);
-        print('Выбрано фото/видео: ${imageFile.path}');
-        // Здесь можно добавить логику для отправки файла
+    if (status.isGranted) {
+      try {
+        final ImagePicker picker = ImagePicker();
+        final XFile? file = await picker.pickImage(source: ImageSource.gallery);
+
+        if (file != null) {
+          // Обработка выбранного фото/видео
+          final File imageFile = File(file.path);
+          print('Выбрано фото/видео: ${imageFile.path}');
+          // Здесь можно добавить логику для отправки файла
+        }
+      } catch (e) {
+        // Обработка исключения
+        if (mounted) _showAlert(context, 'Галерея недоступна');
       }
-    } catch (e) {
-      // Обработка исключения
-      _showAlert(context, 'Галерея недоступна');
+    } else {
+      // Разрешение отклонено
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Разрешение на доступ к хранилищу отклонено'),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
     }
   }
 
-//* Выбор документа или файла
+//* Метод выбора документа или файла с запросом разрешения
   Future<void> _pickDocumentOrFile() async {
-    try {
-      final FilePickerResult? result = await FilePicker.platform.pickFiles();
-
-      if (result != null) {
-        // Обработка выбранного файла
-        final File file = File(result.files.single.path!);
-        print('Выбран файл: ${file.path}');
-        // Здесь можно добавить логику для отправки файла
+    // Запрашиваем разрешение на доступ к хранилищу
+    final status = await Permission.storage.request();
+    if (status.isGranted) {
+      try {
+        final FilePickerResult? result = await FilePicker.platform.pickFiles();
+        if (result != null) {
+          // Обработка выбранного файла
+          final File file = File(result.files.single.path!);
+          print('Выбран файл: ${file.path}');
+          // Здесь можно добавить логику для отправки файла
+        }
+      } catch (e) {
+        // Обработка исключения
+        if (mounted) _showAlert(context, 'Файлы недоступны');
       }
-    } catch (e) {
-      // Обработка исключения
-      _showAlert(context, 'Файлы недоступны');
+    } else {
+      // Разрешение отклонено
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Разрешение на доступ к хранилищу отклонено'),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
     }
   }
 
