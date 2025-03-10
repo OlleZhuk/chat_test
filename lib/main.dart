@@ -10,10 +10,8 @@ import 'view_model/services/color_adapter.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // var path = Directory.current.path;
   await Hive.initFlutter();
   Hive
-    // ..init(path)
     ..registerAdapter(UserAdapter())
     ..registerAdapter(MessageAdapter())
     ..registerAdapter(ColorAdapter());

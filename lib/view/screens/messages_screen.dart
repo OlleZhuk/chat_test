@@ -3,16 +3,21 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:open_file/open_file.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../../model/message.dart';
 import '../../model/chat_bubble_radius.dart';
 import '../../model/user.dart';
 import '../../view_model/providers/chat_provider.dart';
+import '../../view_model/widgets/audio_player.dart';
 import '../../view_model/widgets/left_chat_bubble.dart';
 import '../../view_model/widgets/right_chat_bubble.dart';
+import '../../view_model/widgets/video_player.dart';
 
 class MessagesScreen extends StatelessWidget {
   const MessagesScreen({super.key, required this.user});
@@ -155,8 +160,105 @@ class _OutputTextMessagesState extends ConsumerState<_OutputTextMessages> {
     );
   }
 
+  //* Метод открытия файлов
+  void _openFile(String filePath) async {
+    final result = await OpenFile.open(filePath);
+    if (result.type != ResultType.done && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Не удалось открыть файл: ${result.message}'),
+        ),
+      );
+    }
+  }
+
+  //* Метод построения текстовых сообщений
+  Widget _buildTextMessage(
+      Message message, String formattedTime, bool isOutgoing) {
+    return Stack(
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 4.0),
+          child: RichText(
+            text: TextSpan(
+              children: [
+                TextSpan(text: message.text),
+                const WidgetSpan(
+                  alignment: PlaceholderAlignment.baseline,
+                  baseline: TextBaseline.alphabetic,
+                  child: SizedBox(width: 60, height: 8),
+                ),
+              ],
+            ),
+          ),
+        ),
+        Positioned(
+          bottom: 0,
+          right: 0,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(formattedTime),
+              if (isOutgoing)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4, left: 4),
+                  child: Image.asset('assets/icons/Read.png'),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  //* Метод построения файловых сообщений
+  Widget _buildFileMessage(
+      Message message, String formattedTime, bool isOutgoing) {
+    return Column(
+      crossAxisAlignment:
+          isOutgoing ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+      children: [
+        if (message.fileType == 'image') Image.file(File(message.filePath)),
+        if (message.fileType == 'video')
+          VideoPlayerWidget(filePath: message.filePath),
+        if (message.fileType == 'audio') buildAudioPlayer(message.filePath),
+        if (message.fileType == 'file')
+          GestureDetector(
+            onTap: () => _openFile(message.filePath),
+            child: Text('Файл: ${message.filePath.split('/').last}'),
+          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text(formattedTime),
+            if (isOutgoing)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4, left: 4),
+                child: Image.asset('assets/icons/Read.png'),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  //* Метод построения комби-сообщений
+  Widget _buildFileWithTextMessage(
+      Message message, String formattedTime, bool isOutgoing) {
+    return Column(
+      crossAxisAlignment:
+          isOutgoing ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+      children: [
+        _buildFileMessage(message, '', false),
+        _buildTextMessage(message, formattedTime, isOutgoing),
+      ],
+    );
+  }
+
   //* Метод отрисовки сообщений
-  _buildMessageContainer(
+  Widget _buildMessageContainer(
       bool isLast, bool isOutgoing, Message message, String formattedTime) {
     final theme = Theme.of(context);
     const maxRadius = Radius.circular(largeRadius);
@@ -188,39 +290,16 @@ class _OutputTextMessagesState extends ConsumerState<_OutputTextMessages> {
                 ? const EdgeInsets.fromLTRB(13, 13, 36, 13)
                 : const EdgeInsets.all(13)
             : const EdgeInsets.fromLTRB(36, 13, 13, 13),
-        child: Stack(
+        child: Column(
+          crossAxisAlignment:
+              isOutgoing ? CrossAxisAlignment.end : CrossAxisAlignment.start,
           children: [
-            Padding(
-              padding: const EdgeInsets.only(bottom: 4.0),
-              child: RichText(
-                text: TextSpan(
-                  children: [
-                    TextSpan(text: message.text),
-                    const WidgetSpan(
-                      alignment: PlaceholderAlignment.baseline,
-                      baseline: TextBaseline.alphabetic,
-                      child: SizedBox(width: 60, height: 8),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            Positioned(
-              bottom: 0,
-              right: 0,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(formattedTime),
-                  if (isOutgoing)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 4, left: 4),
-                      child: Image.asset('assets/icons/Read.png'),
-                    ),
-                ],
-              ),
-            ),
+            if (message.filePath.isEmpty)
+              _buildTextMessage(message, formattedTime, isOutgoing),
+            if (message.filePath.isNotEmpty && message.text.isEmpty)
+              _buildFileMessage(message, formattedTime, isOutgoing),
+            if (message.filePath.isNotEmpty && message.text.isNotEmpty)
+              _buildFileWithTextMessage(message, formattedTime, isOutgoing),
           ],
         ),
       ),
@@ -324,8 +403,8 @@ class InputTextMessageState extends ConsumerState<_InputTextMessage> {
     );
   }
 
-  //* Метод отправки сообщения:
-  void submitMessage() async {
+  //* Метод отправки текстового сообщения:
+  void _submitMessage() async {
     final enteredTextMessage = _textController.text;
 
     if (enteredTextMessage.trim().isEmpty) return;
@@ -351,8 +430,9 @@ class InputTextMessageState extends ConsumerState<_InputTextMessage> {
         if (file != null) {
           // Обработка выбранного фото/видео
           final File imageFile = File(file.path);
-          print('Выбрано фото/видео: ${imageFile.path}');
-          // Здесь можно добавить логику для отправки файла
+          if (mounted) {
+            _showFileSendModal(context, imageFile, _textController.text.trim());
+          }
         }
       } catch (e) {
         // Обработка исключения
@@ -381,8 +461,9 @@ class InputTextMessageState extends ConsumerState<_InputTextMessage> {
         if (result != null) {
           // Обработка выбранного файла
           final File file = File(result.files.single.path!);
-          print('Выбран файл: ${file.path}');
-          // Здесь можно добавить логику для отправки файла
+          if (mounted) {
+            _showFileSendModal(context, file, _textController.text.trim());
+          }
         }
       } catch (e) {
         // Обработка исключения
@@ -401,7 +482,7 @@ class InputTextMessageState extends ConsumerState<_InputTextMessage> {
     }
   }
 
-  /// Показ алерта
+  //* Показ алерта
   void _showAlert(BuildContext context, String message) {
     showDialog(
       context: context,
@@ -416,6 +497,154 @@ class InputTextMessageState extends ConsumerState<_InputTextMessage> {
         ],
       ),
     );
+  }
+
+  //* Метод выбора файлов
+  void _showFileSendModal(
+      BuildContext context, File file, String? initialText) {
+    final TextEditingController textController =
+        TextEditingController(text: initialText);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.fromLTRB(
+            10,
+            0,
+            10,
+            MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Text(
+                  (file.path.endsWith('.jpg') || file.path.endsWith('.png'))
+                      ? 'Отправить изображение'
+                      : file.path.endsWith('.mp4')
+                          ? 'Отправить видео'
+                          : file.path.endsWith('.mp3')
+                              ? 'Отправить аудио'
+                              : 'Отправить файл',
+                  style: const TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ),
+              //> Отображение файла
+              if (file.path.endsWith('.jpg') || file.path.endsWith('.png'))
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Image.file(file,
+                        height: 150, width: double.infinity, fit: BoxFit.cover),
+                    const SizedBox(height: 6),
+                    Text(file.path.split('/').last)
+                  ],
+                )
+              else if (file.path.endsWith('.mp4'))
+                Column(
+                  children: [
+                    const Icon(Icons.videocam, size: 100),
+                    const SizedBox(height: 6),
+                    Text(file.path.split('/').last)
+                  ],
+                )
+              else
+                Text(
+                  file.path.split('/').last,
+                  style: const TextStyle(fontSize: 16),
+                ),
+              //> Поле ввода текста
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: TextField(
+                  controller: textController,
+                  decoration: const InputDecoration(
+                    hintText: 'Добавьте текст...',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ),
+              //> Кнопки "Отмена" и "Отправить"
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Отмена'),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      final text = textController.text.trim();
+                      _sendFileWithText(file, text); // Отправка файла и текста
+                      Navigator.pop(context);
+                    },
+                    child: const Text('Отправить'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  //* Метод отправки файла и текста:
+  void _sendFileWithText(File file, String text) async {
+    try {
+      //> Сохраняем файл локально
+      final savedFile = await _saveFileLocally(file);
+
+      //> Определяем тип файла
+      String fileType;
+      if (file.path.endsWith('.jpg') || file.path.endsWith('.png')) {
+        fileType = 'image';
+      } else if (file.path.endsWith('.mp4')) {
+        fileType = 'video';
+      } else if (file.path.endsWith('.mp3')) {
+        fileType = 'audio';
+      } else {
+        fileType = 'file';
+      }
+
+      //> Создаем сообщение
+      final message = Message(
+        widget.user.id, // userId
+        text, // text
+        savedFile.path, // filePath
+        fileType, // fileType
+        DateTime.now(), // timestamp
+        true, // isOutgoing
+      );
+
+      //> Сохраняем сообщение в Hive
+      final messagesBox = Hive.box<Message>('messages');
+      await messagesBox.add(message);
+
+      //> Обновляем состояние провайдера
+      ref.read(messageProvider.notifier).loadMessages();
+
+      //> Очищаем поле ввода
+      _textController.clear();
+    } catch (e) {
+      // Обработка ошибок
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Ошибка при отправке файла: $e')),
+        );
+      }
+    }
+  }
+
+  //* Метод локального сохранения файлов
+  Future<File> _saveFileLocally(File file) async {
+    final appDir = await getApplicationDocumentsDirectory();
+    final savedFile = File('${appDir.path}/${file.path.split('/').last}');
+    return await file.copy(savedFile.path);
   }
 
   //> Возможный метод отправки с клавиатуры:
@@ -497,7 +726,7 @@ class InputTextMessageState extends ConsumerState<_InputTextMessage> {
           _isButtonVisible
               ? IconButton(
                   icon: const Icon(Icons.send),
-                  onPressed: submitMessage,
+                  onPressed: _submitMessage,
                 )
               : IconButton(
                   icon: Image.asset('assets/icons/Audio.png', scale: .8),
