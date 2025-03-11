@@ -14,6 +14,7 @@ import '../../model/message.dart';
 import '../../model/chat_bubble_radius.dart';
 import '../../model/user.dart';
 import '../../view_model/providers/chat_provider.dart';
+import '../../view_model/widgets/divider.dart';
 import '../../view_model/widgets/player_audio.dart';
 import '../../view_model/widgets/chat_bubble_left.dart';
 import '../../view_model/widgets/chat_bubble_right.dart';
@@ -52,8 +53,8 @@ class MessagesScreen extends StatelessWidget {
       ),
       body: Column(
         children: [
-          _OutputTextMessages(user: user),
-          _InputTextMessage(user: user),
+          _OutputTextMessages(user: user), // #63
+          _InputTextMessage(user: user), // #390
         ],
       ),
     );
@@ -78,7 +79,7 @@ class _OutputTextMessagesState extends ConsumerState<_OutputTextMessages> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      //> с учетом реверса - minScrollExtent
+      //> с учетом реверса -> minScrollExtent
       _scrollController.jumpTo(_scrollController.position.minScrollExtent);
     });
   }
@@ -124,16 +125,17 @@ class _OutputTextMessagesState extends ConsumerState<_OutputTextMessages> {
             return Padding(
               //> наружные для сообщения
               padding: EdgeInsets.symmetric(
-                vertical: 4.0,
+                vertical: 2.0,
                 horizontal:
-                    //> для нижнего - малый, для остальных - с добавкой:
+                    //> для нижнего/первого - малый,
+                    //> для остальных - с добавкой:
                     isLastInGroup ? smallRadius : smallRadius + largeRadius,
               ),
               child: Align(
                 alignment:
                     isOutgoing ? Alignment.centerRight : Alignment.centerLeft,
                 child: isLastInGroup
-                    //> для нижнего - чат-бабл,
+                    //> для нижнего/первого - чат-бабл,
                     //> для остальных - обычные закругления контейнера
                     ? ClipPath(
                         clipper: isOutgoing
@@ -160,7 +162,7 @@ class _OutputTextMessagesState extends ConsumerState<_OutputTextMessages> {
     );
   }
 
-  //* Метод открытия файлов
+  //* Метод открытия/просмотра файлов
   void _openFile(String filePath) async {
     final result = await OpenFile.open(filePath);
     if (result.type != ResultType.done && mounted) {
@@ -172,11 +174,13 @@ class _OutputTextMessagesState extends ConsumerState<_OutputTextMessages> {
     }
   }
 
-  //* Метод построения текстовых сообщений
+  //* Метод построения текстового сообщения
   Widget _buildTextMessage(
       Message message, String formattedTime, bool isOutgoing) {
     return Stack(
       children: [
+        //> Основной текст и отступ, исключающий
+        //> "наползание" на время
         Padding(
           padding: const EdgeInsets.only(bottom: 4.0),
           child: RichText(
@@ -186,12 +190,14 @@ class _OutputTextMessagesState extends ConsumerState<_OutputTextMessages> {
                 const WidgetSpan(
                   alignment: PlaceholderAlignment.baseline,
                   baseline: TextBaseline.alphabetic,
-                  child: SizedBox(width: 60, height: 8),
+                  //> отступ
+                  child: SizedBox(width: 60),
                 ),
               ],
             ),
           ),
         ),
+        //> Время и отметка
         Positioned(
           bottom: 0,
           right: 0,
@@ -212,12 +218,10 @@ class _OutputTextMessagesState extends ConsumerState<_OutputTextMessages> {
     );
   }
 
-  //* Метод построения файловых сообщений
+  //* Метод построения файлового сообщения
   Widget _buildFileMessage(
       Message message, String formattedTime, bool isOutgoing) {
     return Column(
-      crossAxisAlignment:
-          isOutgoing ? CrossAxisAlignment.end : CrossAxisAlignment.start,
       children: [
         if (message.fileType == 'image') Image.file(File(message.filePath)),
         if (message.fileType == 'video')
@@ -226,38 +230,53 @@ class _OutputTextMessagesState extends ConsumerState<_OutputTextMessages> {
         if (message.fileType == 'file')
           GestureDetector(
             onTap: () => _openFile(message.filePath),
-            child: Text('Файл: ${message.filePath.split('/').last}'),
+            child: Row(
+              children: [
+                const Text('Файл: '),
+                Text(
+                  message.filePath.split('/').last,
+                  style: const TextStyle(fontSize: 20),
+                ),
+              ],
+            ),
           ),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text(formattedTime),
-            if (isOutgoing)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 4, left: 4),
-                child: Image.asset('assets/icons/Read.png'),
+        const SizedBox(height: 6),
+        //> не показывать строку со временем при таких условиях:
+        (message.fileType == 'image' ||
+                    message.fileType == 'video' ||
+                    message.fileType == 'audio' ||
+                    message.fileType == 'file') &&
+                message.text.isNotEmpty
+            ? Container()
+            : Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(formattedTime),
+                  if (isOutgoing)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4, left: 4),
+                      child: Image.asset('assets/icons/Read.png'),
+                    ),
+                ],
               ),
-          ],
-        ),
       ],
     );
   }
 
-  //* Метод построения комби-сообщений
+  //* Метод построения комби-сообщения
   Widget _buildFileWithTextMessage(
       Message message, String formattedTime, bool isOutgoing) {
     return Column(
-      crossAxisAlignment:
-          isOutgoing ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        _buildFileMessage(message, '', false),
+        _buildFileMessage(message, formattedTime, isOutgoing), // без времени
         _buildTextMessage(message, formattedTime, isOutgoing),
       ],
     );
   }
 
-  //* Метод отрисовки сообщений
+  //* Метод отрисовки сообщения
   Widget _buildMessageContainer(
       bool isLast, bool isOutgoing, Message message, String formattedTime) {
     final theme = Theme.of(context);
@@ -266,7 +285,7 @@ class _OutputTextMessagesState extends ConsumerState<_OutputTextMessages> {
     //
     return Container(
       constraints: const BoxConstraints(
-        maxWidth: 330,
+        maxWidth: 300,
         minHeight: largeRadius * 2,
         maxHeight: double.infinity,
       ),
@@ -287,12 +306,11 @@ class _OutputTextMessagesState extends ConsumerState<_OutputTextMessages> {
         //> отступы для текста нижнего сообщения и остальных
         padding: isOutgoing
             ? isLast
-                ? const EdgeInsets.fromLTRB(13, 13, 36, 13)
+                ? const EdgeInsets.fromLTRB(13, 13, 36, 4)
                 : const EdgeInsets.all(13)
-            : const EdgeInsets.fromLTRB(36, 13, 13, 13),
+            : const EdgeInsets.fromLTRB(36, 4, 13, 4),
         child: Column(
-          crossAxisAlignment:
-              isOutgoing ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             if (message.filePath.isEmpty)
               _buildTextMessage(message, formattedTime, isOutgoing),
@@ -355,12 +373,12 @@ class _OutputTextMessagesState extends ConsumerState<_OutputTextMessages> {
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
-          Expanded(child: Divider(color: divColor, indent: 13)),
+          dividerBuilder(divColor),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 13),
             child: Text(dateText),
           ),
-          Expanded(child: Divider(color: divColor, endIndent: 13)),
+          dividerBuilder(divColor),
         ],
       ),
     );
@@ -398,26 +416,10 @@ class InputTextMessageState extends ConsumerState<_InputTextMessage> {
 
   //> Кнопка отправки появляется...
   void _updateButtonVisibility() {
-    setState(
-      () => _isButtonVisible = _textController.text.isNotEmpty,
-    );
+    setState(() => _isButtonVisible = _textController.text.isNotEmpty);
   }
 
-  //* Метод отправки текстового сообщения:
-  void _submitMessage() async {
-    final enteredTextMessage = _textController.text;
-
-    if (enteredTextMessage.trim().isEmpty) return;
-
-    ref
-        .read(messageProvider.notifier)
-        .sendMessage(widget.user, enteredTextMessage);
-
-    FocusScope.of(context).unfocus();
-    _textController.clear();
-  }
-
-//* Метод выбора фото или видео с запросом разрешения
+  //* Метод выбора "фото или видео" с запросом разрешения
   Future<void> _pickPhotoOrVideo() async {
     //> Запрос разрешения на доступ к хранилищу
     final status = await Permission.storage.request();
@@ -451,7 +453,7 @@ class InputTextMessageState extends ConsumerState<_InputTextMessage> {
     }
   }
 
-//* Метод выбора документа или файла с запросом разрешения
+  //* Метод выбора "документ или файл" с запросом разрешения
   Future<void> _pickDocumentOrFile() async {
     // Запрашиваем разрешение на доступ к хранилищу
     final status = await Permission.storage.request();
@@ -499,7 +501,7 @@ class InputTextMessageState extends ConsumerState<_InputTextMessage> {
     );
   }
 
-  //* Метод выбора файлов
+  //* Место выбора файлов
   void _showFileSendModal(
       BuildContext context, File file, String? initialText) {
     final TextEditingController textController =
@@ -518,19 +520,30 @@ class InputTextMessageState extends ConsumerState<_InputTextMessage> {
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              //> Заголовок
               Padding(
                 padding: const EdgeInsets.all(16.0),
-                child: Text(
-                  (file.path.endsWith('.jpg') || file.path.endsWith('.png'))
-                      ? 'Отправить изображение'
-                      : file.path.endsWith('.mp4')
-                          ? 'Отправить видео'
-                          : file.path.endsWith('.mp3')
-                              ? 'Отправить аудио'
-                              : 'Отправить файл',
-                  style: const TextStyle(
-                      fontSize: 18, fontWeight: FontWeight.bold),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    dividerBuilder(widget.user.color),
+                    Text(
+                      (file.path.endsWith('.jpg') || file.path.endsWith('.png'))
+                          ? 'Отправить изображение'
+                          : file.path.endsWith('.mp4')
+                              ? 'Отправить видео'
+                              : file.path.endsWith('.mp3')
+                                  ? 'Отправить аудио'
+                                  : 'Отправить файл',
+                      style: TextStyle(
+                          color: widget.user.color,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold),
+                    ),
+                    dividerBuilder(widget.user.color),
+                  ],
                 ),
               ),
               //> Отображение файла
@@ -538,35 +551,39 @@ class InputTextMessageState extends ConsumerState<_InputTextMessage> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Image.file(file,
-                        height: 150, width: double.infinity, fit: BoxFit.cover),
+                    Image.file(file, width: double.infinity, fit: BoxFit.cover),
                     const SizedBox(height: 6),
                     Text(file.path.split('/').last)
                   ],
                 )
               else if (file.path.endsWith('.mp4'))
                 Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.videocam, size: 100),
+                    VideoPlayerWidget(filePath: file.path),
+                    const SizedBox(height: 6),
+                    Text(file.path.split('/').last)
+                  ],
+                )
+              else if (file.path.endsWith('.mp3'))
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    buildAudioPlayer(file.path),
                     const SizedBox(height: 6),
                     Text(file.path.split('/').last)
                   ],
                 )
               else
                 Text(
+                  // textAlign: TextAlign.left,
                   file.path.split('/').last,
                   style: const TextStyle(fontSize: 16),
                 ),
               //> Поле ввода текста
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: TextField(
-                  controller: textController,
-                  decoration: const InputDecoration(
-                    hintText: 'Добавьте текст...',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
+              TextField(
+                controller: textController,
+                decoration: const InputDecoration(hintText: 'Сообщение...'),
               ),
               //> Кнопки "Отмена" и "Отправить"
               Row(
@@ -591,6 +608,20 @@ class InputTextMessageState extends ConsumerState<_InputTextMessage> {
         );
       },
     );
+  }
+
+  //* Метод отправки текстового сообщения:
+  void _submitMessage() async {
+    final enteredTextMessage = _textController.text;
+
+    if (enteredTextMessage.trim().isEmpty) return;
+
+    ref
+        .read(messageProvider.notifier)
+        .sendMessage(widget.user, enteredTextMessage);
+
+    FocusScope.of(context).unfocus();
+    _textController.clear();
   }
 
   //* Метод отправки файла и текста:
@@ -629,6 +660,7 @@ class InputTextMessageState extends ConsumerState<_InputTextMessage> {
       ref.read(messageProvider.notifier).loadMessages();
 
       //> Очищаем поле ввода
+      if (mounted) FocusScope.of(context).unfocus();
       _textController.clear();
     } catch (e) {
       // Обработка ошибок
@@ -640,11 +672,78 @@ class InputTextMessageState extends ConsumerState<_InputTextMessage> {
     }
   }
 
-  //* Метод локального сохранения файлов
+  //* Метод локального сохранения файлов сообщения
   Future<File> _saveFileLocally(File file) async {
     final appDir = await getApplicationDocumentsDirectory();
     final savedFile = File('${appDir.path}/${file.path.split('/').last}');
+
     return await file.copy(savedFile.path);
+  }
+
+  //* Меню выбора вложений
+  Widget _selectionMenu() {
+    return PopupMenuButton<String>(
+      offset: const Offset(0, -120),
+      icon: Image.asset('assets/icons/Attach.png'),
+      onSelected: (value) {
+        //> Обработка выбора пункта меню
+        if (value == 'photo_or_video') {
+          _pickPhotoOrVideo();
+        } else if (value == 'document_or_file') {
+          _pickDocumentOrFile();
+        }
+      },
+      itemBuilder: (BuildContext context) => [
+        PopupMenuItem<String>(
+          value: 'photo_or_video',
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Image.asset('assets/icons/Img.png'),
+              const SizedBox(width: 13),
+              const Text('Фото или видео'),
+            ],
+          ),
+        ),
+        PopupMenuItem<String>(
+          value: 'document_or_file',
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Image.asset('assets/icons/Attachment.png'),
+              const SizedBox(width: 13),
+              const Text('Документ или файл'),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  //* Метод ввода сообщения
+  Expanded _textMessage() {
+    return Expanded(
+      child: TextField(
+        controller: _textController,
+        keyboardType: TextInputType.multiline,
+        maxLines: null, // Многострочный режим
+        textCapitalization: TextCapitalization.sentences,
+        decoration: const InputDecoration(
+          constraints: BoxConstraints(maxHeight: 180),
+          hintText: 'Сообщение...',
+          filled: false,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.all(Radius.circular(26)),
+          ),
+        ),
+
+        //> Как возможный вариант - поменять Enter на Done
+        //> для отправки сообщения с клавиатуры
+        // textInputAction: TextInputAction.done,
+        // onSubmitted: _onSubmitted, // Обработчик нажатия
+        //> -----------------------------------------------
+      ),
+    );
   }
 
   //> Возможный метод отправки с клавиатуры:
@@ -661,67 +760,9 @@ class InputTextMessageState extends ConsumerState<_InputTextMessage> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           //> "Скрепка" с выпадающим меню
-          PopupMenuButton<String>(
-            offset: const Offset(0, -120),
-            icon: Image.asset('assets/icons/Attach.png'),
-            onSelected: (value) {
-              //> Обработка выбора пункта меню
-              if (value == 'photo_or_video') {
-                _pickPhotoOrVideo();
-              } else if (value == 'document_or_file') {
-                _pickDocumentOrFile();
-              }
-            },
-            itemBuilder: (BuildContext context) => [
-              PopupMenuItem<String>(
-                value: 'photo_or_video',
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Image.asset('assets/icons/Img.png'),
-                    const SizedBox(width: 13),
-                    const Text('Фото или видео'),
-                  ],
-                ),
-              ),
-              PopupMenuItem<String>(
-                value: 'document_or_file',
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Image.asset('assets/icons/Attachment.png'),
-                    const SizedBox(width: 13),
-                    const Text('Документ или файл'),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          //
+          _selectionMenu(),
           //> Поле ввода текстового сообщения
-          Expanded(
-            child: TextField(
-              controller: _textController,
-              keyboardType: TextInputType.multiline,
-              maxLines: null, // Многострочный режим
-              textCapitalization: TextCapitalization.sentences,
-              decoration: const InputDecoration(
-                constraints: BoxConstraints(maxHeight: 180),
-                hintText: 'Сообщение...',
-                filled: false,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(26)),
-                ),
-              ),
-
-              //> Как возможный вариант - поменять Enter на Done
-              //> для отправки сообщения с клавиатуры
-              // textInputAction: TextInputAction.done,
-              // onSubmitted: _onSubmitted, // Обработчик нажатия
-              //> -----------------------------------------------
-            ),
-          ),
-          //
+          _textMessage(),
           //> Либо микрофон, либо Отправить (меняются при наборе текста)
           _isButtonVisible
               ? IconButton(
