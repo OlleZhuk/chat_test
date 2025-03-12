@@ -6,10 +6,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:just_audio/just_audio.dart';
 import 'package:open_file/open_file.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:waveform_recorder/waveform_recorder.dart';
 
 import '../../model/message.dart';
 import '../../model/chat_bubble_radius.dart';
@@ -34,21 +34,25 @@ class MessagesScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        toolbarHeight: 80,
+        leadingWidth: 30,
+        toolbarHeight: 90,
         title: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
             CircleAvatar(
               minRadius: 24,
               backgroundColor: user.color,
-              child: Text('${firstName[0]}${lastName[0]}'),
+              child: FittedBox(child: Text('${firstName[0]}${lastName[0]}')),
             ),
             const SizedBox(width: 10),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('$firstName $lastName'),
-                const Text('Не в сети', style: TextStyle(fontSize: 16)),
-              ],
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('$firstName $lastName'),
+                  const Text('Не в сети', style: TextStyle(fontSize: 14)),
+                ],
+              ),
             ),
           ],
         ),
@@ -84,6 +88,12 @@ class _OutputTextMessagesState extends ConsumerState<_OutputTextMessages> {
       //> с учетом реверса -> minScrollExtent
       _scrollController.jumpTo(_scrollController.position.minScrollExtent);
     });
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   @override
@@ -228,7 +238,8 @@ class _OutputTextMessagesState extends ConsumerState<_OutputTextMessages> {
         if (message.fileType == 'image') Image.file(File(message.filePath)),
         if (message.fileType == 'video')
           VideoPlayerWidget(filePath: message.filePath),
-        if (message.fileType == 'audio') buildAudioPlayer(message.filePath),
+        if (message.fileType == 'audio')
+          AudioPlayerWidget(filePath: message.filePath, user: widget.user),
         if (message.fileType == 'file')
           GestureDetector(
             onTap: () => _openFile(message.filePath),
@@ -417,6 +428,35 @@ class InputTextMessageState extends ConsumerState<_InputTextMessage> {
     super.dispose();
   }
 
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          //> "Скрепка" с выпадающим меню
+          _selectionMenu(),
+          //> Поле ввода текстового сообщения
+          _textMessage(),
+          isSubmitButtonVisible
+              //> Отправить (появляется при наборе текста)
+              ? IconButton(
+                  icon: const Icon(Icons.send),
+                  onPressed: _submitMessage,
+                )
+              //> Микрофон
+              : IconButton(
+                  icon: Image.asset('assets/icons/Audio.png', scale: .8),
+                  onPressed: () {
+                    _showFileSendModal(context, null, null);
+                  },
+                ),
+        ],
+      ),
+    );
+  }
+
   //> Кнопка отправки появляется...
   void _updateButtonVisibility() {
     setState(() => isSubmitButtonVisible = _textController.text.isNotEmpty);
@@ -504,7 +544,7 @@ class InputTextMessageState extends ConsumerState<_InputTextMessage> {
     );
   }
 
-  //* Модальный лист для выбора файлов
+  //* Модальный лист для отправки файлов
   void _showFileSendModal(
       BuildContext context, File? file, String? initialText) {
     final textController = TextEditingController(text: initialText);
@@ -580,12 +620,12 @@ class InputTextMessageState extends ConsumerState<_InputTextMessage> {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          buildAudioPlayer(file.path),
-                          const SizedBox(height: 6),
-                          Text(file.path.split('/').last)
+                          AudioPlayerWidget(
+                              user: widget.user, filePath: file.path),
                         ],
                       )
                     else
+                      //> Файл без определенного типа
                       Text(
                         file.path.split('/').last,
                         style: const TextStyle(fontSize: 16),
@@ -595,15 +635,16 @@ class InputTextMessageState extends ConsumerState<_InputTextMessage> {
                       onSend: (file) => setState(() {
                         recordedFile = file;
                       }),
+                      user: widget.user,
                     ),
                   //> Поле ввода текста
-                  recordedFile == null
-                      ? Container()
-                      : TextField(
+                  isSubmitButtonVisible
+                      ? TextField(
                           controller: textController,
                           decoration:
                               const InputDecoration(hintText: 'Сообщение...'),
-                        ),
+                        )
+                      : Container(),
                   //> Кнопки "Отмена" и "Отправить"
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
@@ -651,12 +692,19 @@ class InputTextMessageState extends ConsumerState<_InputTextMessage> {
     _textController.clear();
   }
 
+  //* Метод локального сохранения файла из сообщения
+  Future<File> _saveFileLocally(File file) async {
+    final appDir = await getApplicationDocumentsDirectory();
+    final savedFile = File('${appDir.path}/${file.path.split('/').last}');
+
+    return await file.copy(savedFile.path);
+  }
+
   //* Метод отправки файла и текста:
   void _sendFileWithText(File file, String text) async {
     try {
       //> Сохраняем файл локально
       final savedFile = await _saveFileLocally(file);
-
       //> Определяем тип файла
       String fileType;
       if (file.path.endsWith('.jpg') || file.path.endsWith('.png')) {
@@ -668,7 +716,6 @@ class InputTextMessageState extends ConsumerState<_InputTextMessage> {
       } else {
         fileType = 'file';
       }
-
       //> Создаем сообщение
       final message = Message(
         widget.user.id, // userId
@@ -678,19 +725,16 @@ class InputTextMessageState extends ConsumerState<_InputTextMessage> {
         DateTime.now(), // timestamp
         true, // isOutgoing
       );
-
       //> Сохраняем сообщение в Hive
       final messagesBox = Hive.box<Message>('messages');
       await messagesBox.add(message);
-
       //> Обновляем состояние провайдера
       ref.read(messageProvider.notifier).loadMessages();
-
       //> Очищаем поле ввода
       if (mounted) FocusScope.of(context).unfocus();
       _textController.clear();
     } catch (e) {
-      // Обработка ошибок
+      // Некоторая обработка ошибок
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Ошибка при отправке файла: $e')),
@@ -710,12 +754,10 @@ class InputTextMessageState extends ConsumerState<_InputTextMessage> {
         DateTime.now(), // timestamp
         true, // isOutgoing
       );
-
-      // Сохраняем сообщение в Hive
+      //> Сохранение сообщения в Hive
       final messagesBox = Hive.box<Message>('messages');
       await messagesBox.add(message);
-
-      // Обновляем состояние провайдера
+      //> Обновление состояния провайдера
       ref.read(messageProvider.notifier).loadMessages();
     } catch (e) {
       if (mounted) {
@@ -727,47 +769,39 @@ class InputTextMessageState extends ConsumerState<_InputTextMessage> {
     }
   }
 
-  //* Метод локального сохранения файлов сообщения
-  Future<File> _saveFileLocally(File file) async {
-    final appDir = await getApplicationDocumentsDirectory();
-    final savedFile = File('${appDir.path}/${file.path.split('/').last}');
-
-    return await file.copy(savedFile.path);
-  }
-
-  //* Меню выбора вложений
+  //* Меню выбора на скрепке
   Widget _selectionMenu() {
     return PopupMenuButton<String>(
       offset: const Offset(0, -120),
       icon: Image.asset('assets/icons/Attach.png'),
       onSelected: (value) {
         //> Обработка выбора пункта меню
-        if (value == 'photo_or_video') {
+        if (value == 'images') {
           _pickPhotoOrVideo();
-        } else if (value == 'document_or_file') {
+        } else if (value == 'files') {
           _pickDocumentOrFile();
         }
       },
       itemBuilder: (BuildContext context) => [
         PopupMenuItem<String>(
-          value: 'photo_or_video',
+          value: 'images',
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Image.asset('assets/icons/Img.png'),
               const SizedBox(width: 13),
-              const Text('Фото или видео'),
+              const Text('Изображение'),
             ],
           ),
         ),
         PopupMenuItem<String>(
-          value: 'document_or_file',
+          value: 'files',
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Image.asset('assets/icons/Attachment.png'),
               const SizedBox(width: 13),
-              const Text('Документ или файл'),
+              const Text('Другие файлы'),
             ],
           ),
         ),
@@ -806,33 +840,4 @@ class InputTextMessageState extends ConsumerState<_InputTextMessage> {
   //   if (value.isNotEmpty) submitMessage();
   // }
   //> --------------------------------------
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          //> "Скрепка" с выпадающим меню
-          _selectionMenu(),
-          //> Поле ввода текстового сообщения
-          _textMessage(),
-          isSubmitButtonVisible
-              //> Отправить (появляется при наборе текста)
-              ? IconButton(
-                  icon: const Icon(Icons.send),
-                  onPressed: _submitMessage,
-                )
-              //> Микрофон
-              : IconButton(
-                  icon: Image.asset('assets/icons/Audio.png', scale: .8),
-                  onPressed: () {
-                    _showFileSendModal(context, null, null);
-                  },
-                ),
-        ],
-      ),
-    );
-  }
 }
