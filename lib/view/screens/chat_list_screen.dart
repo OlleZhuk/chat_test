@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
 import '../../model/dev_data/dev_data.dart';
 import '../../model/message.dart';
@@ -41,7 +40,7 @@ class ChatListScreenState extends ConsumerState<ChatListScreen> {
     final chats = ref.watch(chatProvider);
     ref.watch(messageProvider);
 
-    //> Сортировка чатов по времени последнего сообщения
+    //> Сортировка чатов по убыванию времени последнего сообщения
     chats.sort((a, b) {
       final lastMessageA =
           ref.read(messageProvider.notifier).getLastMessageForUser(a.id);
@@ -51,12 +50,13 @@ class ChatListScreenState extends ConsumerState<ChatListScreen> {
       final timestampA = lastMessageA?.timestamp ?? DateTime(1970);
       final timestampB = lastMessageB?.timestamp ?? DateTime(1970);
 
-      return timestampB.compareTo(timestampA); // Сортировка по убыванию
+      return timestampB.compareTo(timestampA);
     });
 
-    //> Фильтрация чатов по имени или фамилии
+    //> Фильтрация чатов при поиске
     final filteredChats = chats.where((user) {
       final fullName = '${user.firstName} ${user.lastName}'.toLowerCase();
+
       return fullName.contains(_searchQuery.toLowerCase());
     }).toList();
 
@@ -99,9 +99,7 @@ class ChatListScreenState extends ConsumerState<ChatListScreen> {
                 ),
               ),
               onChanged: (value) {
-                setState(() {
-                  _searchQuery = value; // Обновляем запрос поиска
-                });
+                setState(() => _searchQuery = value);
               },
             ),
           ),
@@ -162,40 +160,6 @@ class ChatListScreenState extends ConsumerState<ChatListScreen> {
         },
       ),
     );
-  }
-
-  //* Падежи минуты
-  String _formatMinutes(int minutes) {
-    if (minutes == 1) {
-      return '$minutes минута';
-    } else if (minutes >= 2 && minutes <= 4) {
-      return '$minutes минуты';
-    } else {
-      return '$minutes минут';
-    }
-  }
-
-  //* Формат времени
-  String _formatMessageTime(DateTime timestamp) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final yesterday = today.subtract(const Duration(days: 1));
-
-    final difference = now.difference(timestamp);
-
-    if (difference.inMinutes <= 10) {
-      // Если прошло меньше 10 минут
-      return '${_formatMinutes(difference.inMinutes)} назад';
-    } else if (timestamp.isAfter(today)) {
-      // Если сегодня
-      return DateFormat('HH:mm').format(timestamp);
-    } else if (timestamp.isAfter(yesterday)) {
-      // Если вчера
-      return 'Вчера';
-    } else {
-      // Если раньше, чем вчера
-      return DateFormat('dd.MM.yy').format(timestamp);
-    }
   }
 
   //* Проверка типов файлов в сообщениях

@@ -447,7 +447,47 @@ class InputTextMessageState extends ConsumerState<_InputTextMessage> {
     setState(() => isSubmitButtonVisible = _textController.text.isNotEmpty);
   }
 
-  //* Метод выбора "фото или видео" с запросом разрешения
+  //* Меню выбора на скрепке
+  Widget _selectionMenu() {
+    return PopupMenuButton<String>(
+      offset: const Offset(0, -120),
+      icon: Image.asset('assets/icons/Attach.png'),
+      onSelected: (value) {
+        //> Обработка выбора пункта меню
+        if (value == 'images') {
+          _pickPhotoOrVideo();
+        } else if (value == 'files') {
+          _pickDocumentOrFile();
+        }
+      },
+      itemBuilder: (BuildContext context) => [
+        PopupMenuItem<String>(
+          value: 'images',
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Image.asset('assets/icons/Img.png'),
+              const SizedBox(width: 13),
+              const Text('Изображение'),
+            ],
+          ),
+        ),
+        PopupMenuItem<String>(
+          value: 'files',
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Image.asset('assets/icons/Attachment.png'),
+              const SizedBox(width: 13),
+              const Text('Другие файлы'),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  //* Метод выбора "изображение" с запросом разрешения
   Future<void> _pickPhotoOrVideo() async {
     //> Запрос разрешения на доступ к хранилищу
     final status = await Permission.storage.request();
@@ -481,7 +521,7 @@ class InputTextMessageState extends ConsumerState<_InputTextMessage> {
     }
   }
 
-  //* Метод выбора "документ или файл" с запросом разрешения
+  //* Метод выбора "другие файлы" с запросом разрешения
   Future<void> _pickDocumentOrFile() async {
     // Запрашиваем разрешение на доступ к хранилищу
     final status = await Permission.storage.request();
@@ -510,23 +550,6 @@ class InputTextMessageState extends ConsumerState<_InputTextMessage> {
         );
       }
     }
-  }
-
-  //* Показ алерта
-  void _showAlert(BuildContext context, String message) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Ошибка'),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
   }
 
   //* Модальный лист для отправки файлов
@@ -663,6 +686,32 @@ class InputTextMessageState extends ConsumerState<_InputTextMessage> {
     );
   }
 
+  //* Метод ввода сообщения
+  Expanded _textMessage() {
+    return Expanded(
+      child: TextField(
+        controller: _textController,
+        keyboardType: TextInputType.multiline,
+        maxLines: null, // Многострочный режим
+        textCapitalization: TextCapitalization.sentences,
+        decoration: const InputDecoration(
+          constraints: BoxConstraints(maxHeight: 180),
+          hintText: 'Сообщение...',
+          filled: false,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.all(Radius.circular(26)),
+          ),
+        ),
+
+        //> Как возможный вариант - поменять Enter на Done
+        //> для отправки сообщения с клавиатуры
+        // textInputAction: TextInputAction.done,
+        // onSubmitted: _onSubmitted, // Обработчик нажатия
+        //> -----------------------------------------------
+      ),
+    );
+  }
+
   //* Метод отправки текстового сообщения:
   void _submitMessage() async {
     final enteredTextMessage = _textController.text;
@@ -675,14 +724,6 @@ class InputTextMessageState extends ConsumerState<_InputTextMessage> {
 
     FocusScope.of(context).unfocus();
     _textController.clear();
-  }
-
-  //* Метод локального сохранения файла из сообщения
-  Future<File> _saveFileLocally(File file) async {
-    final appDir = await getApplicationDocumentsDirectory();
-    final savedFile = File('${appDir.path}/${file.path.split('/').last}');
-
-    return await file.copy(savedFile.path);
   }
 
   //* Метод отправки файла и текста:
@@ -754,68 +795,27 @@ class InputTextMessageState extends ConsumerState<_InputTextMessage> {
     }
   }
 
-  //* Меню выбора на скрепке
-  Widget _selectionMenu() {
-    return PopupMenuButton<String>(
-      offset: const Offset(0, -120),
-      icon: Image.asset('assets/icons/Attach.png'),
-      onSelected: (value) {
-        //> Обработка выбора пункта меню
-        if (value == 'images') {
-          _pickPhotoOrVideo();
-        } else if (value == 'files') {
-          _pickDocumentOrFile();
-        }
-      },
-      itemBuilder: (BuildContext context) => [
-        PopupMenuItem<String>(
-          value: 'images',
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Image.asset('assets/icons/Img.png'),
-              const SizedBox(width: 13),
-              const Text('Изображение'),
-            ],
-          ),
-        ),
-        PopupMenuItem<String>(
-          value: 'files',
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Image.asset('assets/icons/Attachment.png'),
-              const SizedBox(width: 13),
-              const Text('Другие файлы'),
-            ],
-          ),
-        ),
-      ],
-    );
+  //* Метод локального сохранения файла из сообщения
+  Future<File> _saveFileLocally(File file) async {
+    final appDir = await getApplicationDocumentsDirectory();
+    final savedFile = File('${appDir.path}/${file.path.split('/').last}');
+
+    return await file.copy(savedFile.path);
   }
 
-  //* Метод ввода сообщения
-  Expanded _textMessage() {
-    return Expanded(
-      child: TextField(
-        controller: _textController,
-        keyboardType: TextInputType.multiline,
-        maxLines: null, // Многострочный режим
-        textCapitalization: TextCapitalization.sentences,
-        decoration: const InputDecoration(
-          constraints: BoxConstraints(maxHeight: 180),
-          hintText: 'Сообщение...',
-          filled: false,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.all(Radius.circular(26)),
+  //* Показ алерта
+  void _showAlert(BuildContext context, String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Ошибка'),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
           ),
-        ),
-
-        //> Как возможный вариант - поменять Enter на Done
-        //> для отправки сообщения с клавиатуры
-        // textInputAction: TextInputAction.done,
-        // onSubmitted: _onSubmitted, // Обработчик нажатия
-        //> -----------------------------------------------
+        ],
       ),
     );
   }
