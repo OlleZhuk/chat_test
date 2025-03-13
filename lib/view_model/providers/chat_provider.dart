@@ -62,6 +62,17 @@ class MessageNotifier extends StateNotifier<List<Message>> {
     state = messagesBox.values.toList();
   }
 
+  //* Метод получения последнего сообщения пользователя
+  Message? getLastMessageForUser(String userId) {
+    final userMessages =
+        state.where((message) => message.userId == userId).toList();
+    if (userMessages.isEmpty) return null;
+    userMessages.sort(
+        (a, b) => b.timestamp.compareTo(a.timestamp)); // Сортировка по времени
+
+    return userMessages.first;
+  }
+
   Future<void> sendMessage(User user, String text) async {
     if (text.trim().isEmpty) return;
 
