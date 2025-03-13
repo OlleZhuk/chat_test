@@ -1,9 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../view_model/providers/chat_provider.dart';
 import '../message.dart';
 import '../user.dart';
 
