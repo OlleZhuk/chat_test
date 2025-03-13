@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../model/dev_data/dev_data.dart';
 import '../../model/message.dart';
-import '../../view_model/providers/chat_provider.dart';
+import '../../view_model/providers/main_provider.dart';
 import '../../view_model/services/date_time_format.dart';
 import 'messages_screen.dart';
 

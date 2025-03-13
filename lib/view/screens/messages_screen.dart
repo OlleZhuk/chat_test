@@ -13,7 +13,7 @@ import 'package:permission_handler/permission_handler.dart';
 import '../../model/message.dart';
 import '../../model/chat_bubble_radius.dart';
 import '../../model/user.dart';
-import '../../view_model/providers/chat_provider.dart';
+import '../../view_model/providers/main_provider.dart';
 import '../../view_model/services/date_time_format.dart';
 import '../../view_model/widgets/divider.dart';
 import '../../view_model/services/player_audio.dart';

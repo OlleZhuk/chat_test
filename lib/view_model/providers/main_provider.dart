@@ -23,10 +23,7 @@ class ChatNotifier extends StateNotifier<List<User>> {
   void loadChats() {
     final usersBox = hiveBoxes['users'] as Box<User>;
     final allUsers = usersBox.values.toList();
-
-    // state = usersBox.values.toList();
-
-    // superuser вне списка
+    //> superuser, который вне списка чатов
     state = allUsers.where((user) => user.id != 'superuser').toList();
   }
 
@@ -62,15 +59,23 @@ class MessageNotifier extends StateNotifier<List<Message>> {
     state = messagesBox.values.toList();
   }
 
-  //* Метод получения последнего сообщения пользователя
+  //* Метод определения последнего сообщения пользователя
   Message? getLastMessageForUser(String userId) {
     final userMessages =
         state.where((message) => message.userId == userId).toList();
     if (userMessages.isEmpty) return null;
-    userMessages.sort(
-        (a, b) => b.timestamp.compareTo(a.timestamp)); // Сортировка по времени
+    //> Сортировка по времени
+    userMessages.sort((a, b) => b.timestamp.compareTo(a.timestamp));
 
     return userMessages.first;
+  }
+
+  //* Метод получения сообщений для диалога
+  List<Message> getMessagesForDialog(String userId) {
+    return state
+        .where((message) =>
+            message.userId == userId || message.userId == 'superuser')
+        .toList();
   }
 
   Future<void> sendMessage(User user, String text) async {
@@ -78,29 +83,20 @@ class MessageNotifier extends StateNotifier<List<Message>> {
 
     final messagesBox = hiveBoxes['messages'] as Box<Message>;
 
-    // Создаем новое сообщение
+    //> Новое сообщение
     final message = Message(
       user.id, // userId
       text, // text
-      '', // imageUrl (если нужно)
-      '', // audioUrl (если нужно)
+      '', // filePath (если нужно)
+      '', // fileType (если нужно)
       DateTime.now(), // timestamp
-      true,
+      true, // исходящее
     );
 
-    // Сохраняем сообщение в Hive
+    //> Сохранение сообщения в Hive
     await messagesBox.add(message);
-
-    // Обновляем состояние сообщений
+    //> Обновление состояния сообщений
     loadMessages();
-  }
-
-  // Метод для получения сообщений по диалогу
-  List<Message> getMessagesForDialog(String userId) {
-    return state
-        .where((message) =>
-            message.userId == userId || message.userId == 'superuser')
-        .toList();
   }
 }
 
