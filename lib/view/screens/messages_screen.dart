@@ -14,6 +14,7 @@ import '../../model/message.dart';
 import '../../model/chat_bubble_radius.dart';
 import '../../model/user.dart';
 import '../../view_model/providers/chat_provider.dart';
+import '../../view_model/services/date_time_format.dart';
 import '../../view_model/widgets/divider.dart';
 import '../../view_model/widgets/player_audio.dart';
 import '../../view_model/widgets/chat_bubble_left.dart';
@@ -173,19 +174,7 @@ class _OutputTextMessagesState extends ConsumerState<_OutputTextMessages> {
     );
   }
 
-  //* Метод открытия/просмотра файлов
-  void _openFile(String filePath) async {
-    final result = await OpenFile.open(filePath);
-    if (result.type != ResultType.done && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Не удалось открыть файл: ${result.message}'),
-        ),
-      );
-    }
-  }
-
-  //* Метод построения текстового сообщения
+  //* Метод сборки текстового сообщения
   Widget _buildTextMessage(
       Message message, String formattedTime, bool isOutgoing) {
     return Stack(
@@ -229,7 +218,7 @@ class _OutputTextMessagesState extends ConsumerState<_OutputTextMessages> {
     );
   }
 
-  //* Метод построения файлового сообщения
+  //* Метод сборки файлового сообщения
   Widget _buildFileMessage(
       Message message, String formattedTime, bool isOutgoing) {
     return Column(
@@ -276,7 +265,7 @@ class _OutputTextMessagesState extends ConsumerState<_OutputTextMessages> {
     );
   }
 
-  //* Метод построения комби-сообщения
+  //* Метод сборки комби-сообщения
   Widget _buildFileWithTextMessage(
       Message message, String formattedTime, bool isOutgoing) {
     return Column(
@@ -288,7 +277,52 @@ class _OutputTextMessagesState extends ConsumerState<_OutputTextMessages> {
     );
   }
 
-  //* Метод отрисовки сообщения
+  //* Метод сборки разделителя с датой
+  _buildDateDivider(DateTime date) {
+    final divColor = widget.user.color.withOpacity(.5);
+    String dateText = formatMessageTime(date, isChatScreen: false);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          dividerBuilder(divColor),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 13),
+            child: Text(dateText),
+          ),
+          dividerBuilder(divColor),
+        ],
+      ),
+    );
+  }
+
+  //* Метод группировки сообщений по датам
+  _groupMessagesByDate(List<Message> messages) {
+    final groupedMessages = <dynamic>[];
+    DateTime? currentDate;
+
+    for (final message in messages) {
+      final messageDate = DateTime(
+        message.timestamp.year,
+        message.timestamp.month,
+        message.timestamp.day,
+      );
+
+      if (currentDate == null || currentDate != messageDate) {
+        // Добавляем разделитель с датой
+        groupedMessages.add(messageDate);
+        currentDate = messageDate;
+      }
+
+      // Добавляем сообщение
+      groupedMessages.add(message);
+    }
+
+    return groupedMessages.reversed.toList();
+  }
+
+  //* Метод отрисовки непоследнего сообщения
   Widget _buildMessageContainer(
       bool isLast, bool isOutgoing, Message message, String formattedTime) {
     final theme = Theme.of(context);
@@ -336,64 +370,16 @@ class _OutputTextMessagesState extends ConsumerState<_OutputTextMessages> {
     );
   }
 
-  //* Метод группировки сообщений по датам
-  _groupMessagesByDate(List<Message> messages) {
-    final groupedMessages = <dynamic>[];
-    DateTime? currentDate;
-
-    for (final message in messages) {
-      final messageDate = DateTime(
-        message.timestamp.year,
-        message.timestamp.month,
-        message.timestamp.day,
+  //* Метод открытия/просмотра файлов
+  void _openFile(String filePath) async {
+    final result = await OpenFile.open(filePath);
+    if (result.type != ResultType.done && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Не удалось открыть файл: ${result.message}'),
+        ),
       );
-
-      if (currentDate == null || currentDate != messageDate) {
-        // Добавляем разделитель с датой
-        groupedMessages.add(messageDate);
-        currentDate = messageDate;
-      }
-
-      // Добавляем сообщение
-      groupedMessages.add(message);
     }
-
-    return groupedMessages.reversed.toList();
-  }
-
-  //* Метод построения разделителя с датой
-  _buildDateDivider(DateTime date) {
-    final divColor = widget.user.color.withOpacity(.5);
-    final today = DateTime.now();
-    final yesterday = today.subtract(const Duration(days: 1));
-
-    String dateText;
-
-    if (date.year == today.year &&
-        date.month == today.month &&
-        date.day == today.day) {
-      dateText = 'Сегодня';
-    } else if (date.year == yesterday.year &&
-        date.month == yesterday.month &&
-        date.day == yesterday.day) {
-      dateText = 'Вчера';
-    } else {
-      dateText = DateFormat('dd.MM.yy').format(date);
-    }
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        children: [
-          dividerBuilder(divColor),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 13),
-            child: Text(dateText),
-          ),
-          dividerBuilder(divColor),
-        ],
-      ),
-    );
   }
 }
 

@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../model/dev_data/dev_data.dart';
 import '../../model/message.dart';
 import '../../view_model/providers/chat_provider.dart';
+import '../../view_model/services/date_time_format.dart';
 import 'messages_screen.dart';
 
 class ChatListScreen extends ConsumerStatefulWidget {
@@ -80,19 +81,21 @@ class ChatListScreenState extends ConsumerState<ChatListScreen> {
           preferredSize: const Size.fromHeight(50.0),
           child: Padding(
             padding: const EdgeInsets.all(8.0),
+            //> Поиск
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
                 hintText: "Поиск",
                 prefixIcon: Image.asset('assets/icons/Search_s.png'),
                 suffixIcon: IconButton(
+                  icon: Image.asset('assets/icons/Close.png'),
                   onPressed: () {
-                    _searchController.clear();
                     setState(() {
                       _searchQuery = '';
                     });
+                    _searchController.clear();
+                    FocusScope.of(context).unfocus();
                   },
-                  icon: Image.asset('assets/icons/Close.png'),
                 ),
               ),
               onChanged: (value) {
@@ -142,7 +145,8 @@ class ChatListScreenState extends ConsumerState<ChatListScreen> {
               //> Время/дата сообщения
               trailing: Text(
                 lastMessage != null
-                    ? _formatMessageTime(lastMessage.timestamp)
+                    ? formatMessageTime(lastMessage.timestamp,
+                        isChatScreen: true)
                     : '',
               ),
               onTap: () {
