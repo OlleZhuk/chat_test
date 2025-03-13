@@ -59,7 +59,7 @@ class MainApp extends StatelessWidget {
           scaffoldBackgroundColor: Colors.grey[900],
           fontFamily: 'Gilroy',
         ),
-        home: ChatListScreen(),
+        home: const ChatListScreen(),
       ),
     );
   }

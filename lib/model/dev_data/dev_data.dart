@@ -1,7 +1,9 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../view_model/providers/chat_provider.dart';
 import '../message.dart';
 import '../user.dart';
 
@@ -35,6 +37,16 @@ class DevUsers {
     User('10', 'Сандра', 'Буллочини',
         Colors.primaries[random.nextInt(Colors.primaries.length)]),
   ];
+
+  static Widget refreshButton(void Function() refresh) => IconButton(
+        onPressed: refresh,
+        icon: const Icon(Icons.refresh),
+      );
+
+  static Widget clearButton(void Function() clear) => IconButton(
+        onPressed: clear,
+        icon: Image.asset('assets/icons/Cancel.png'),
+      );
 }
 
 Message outgoingMessage(user) => Message(

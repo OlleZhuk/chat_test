@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../model/dev_data/dev_data.dart';
 import '../../model/message.dart';
 import '../../view_model/providers/chat_provider.dart';
 import 'messages_screen.dart';
@@ -60,14 +61,21 @@ class ChatListScreenState extends ConsumerState<ChatListScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Чаты'),
+        title: const Text(
+          'Чаты',
+          style: TextStyle(fontSize: 30, fontWeight: FontWeight.w600),
+        ),
+        //! Кнопки разработчика
         actions: [
-          // Кнопка разработчика для очистки списка чатов
-          IconButton(
-            onPressed: () => ref.read(chatProvider.notifier).clearChat(),
-            icon: const Icon(Icons.refresh),
-          )
+          //> Ручное обновление экрана
+          DevUsers.refreshButton(
+              () => ref.read(chatProvider.notifier).loadChats()),
+          //> Очистка списка чатов
+          DevUsers.clearButton(
+              () => ref.read(chatProvider.notifier).clearChat()),
         ],
+        //!====================
+        //
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(50.0),
           child: Padding(
