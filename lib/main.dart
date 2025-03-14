@@ -24,18 +24,14 @@ void main() async {
   final messagesBox = Hive.box<Message>('messages');
 
   if (usersBox.isEmpty && messagesBox.isEmpty) {
-    /// Сохраняем супер-пользователя
+    ///> Cупер-пользователь
     usersBox.add(DevUsers.superUser);
-
-    /// Сохраняем список пользователей
+    //> Список пользователей
     usersBox.addAll(DevUsers.users);
-
-    /// Сообщения для каждого пользователя
+    //> Сообщения
     for (var user in DevUsers.users) {
       final outMess = outgoingMessage(user);
       final incMess = incomingMessage(user);
-
-      /// Сохраняем сообщения в Hive
       messagesBox.add(outMess);
       messagesBox.add(incMess);
     }
@@ -50,6 +46,7 @@ class MainApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Обёртка от Riverpod
     return ProviderScope(
       child: MaterialApp(
         debugShowCheckedModeBanner: false,

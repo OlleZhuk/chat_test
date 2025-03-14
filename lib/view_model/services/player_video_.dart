@@ -14,8 +14,8 @@ class VideoPlayerWidget extends StatefulWidget {
 
 class VideoPlayerWidgetState extends State<VideoPlayerWidget> {
   late VideoPlayerController _controller;
-  bool _isPlaying = false;
-  bool _showControls = false;
+  bool isPlaying = false;
+  bool isShowControls = false;
 
   @override
   void initState() {
@@ -30,29 +30,6 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget> {
   void dispose() {
     _controller.dispose();
     super.dispose();
-  }
-
-  void _togglePlayPause() => setState(() {
-        if (_controller.value.isPlaying) {
-          _controller.pause();
-          _isPlaying = false;
-        } else {
-          _controller.play();
-          _isPlaying = true;
-        }
-      });
-
-  void _toggleControls() => setState(() => _showControls = !_showControls);
-
-  void _openFullScreenVideo(BuildContext context, String filePath) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => Scaffold(
-          body: Center(child: VideoPlayerWidget(filePath: filePath)),
-        ),
-      ),
-    );
   }
 
   @override
@@ -70,7 +47,7 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget> {
             aspectRatio: _controller.value.aspectRatio,
             child: VideoPlayer(_controller),
           ),
-          if (_showControls)
+          if (isShowControls)
             Container(
               color: Colors.black54,
               child: Row(
@@ -78,7 +55,7 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget> {
                 children: [
                   IconButton(
                     icon: Icon(
-                      _isPlaying ? Icons.pause : Icons.play_arrow,
+                      isPlaying ? Icons.pause : Icons.play_arrow,
                       color: Colors.white,
                     ),
                     onPressed: _togglePlayPause,
@@ -106,4 +83,29 @@ class VideoPlayerWidgetState extends State<VideoPlayerWidget> {
       ),
     );
   }
+
+  //* Переключатель плей/пауза
+  void _togglePlayPause() => setState(() {
+        if (_controller.value.isPlaying) {
+          _controller.pause();
+          isPlaying = false;
+        } else {
+          _controller.play();
+          isPlaying = true;
+        }
+      });
+
+  //* Полноэкранный режим
+  void _openFullScreenVideo(BuildContext context, String filePath) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => Scaffold(
+          body: Center(child: VideoPlayerWidget(filePath: filePath)),
+        ),
+      ),
+    );
+  }
+
+  void _toggleControls() => setState(() => isShowControls = !isShowControls);
 }

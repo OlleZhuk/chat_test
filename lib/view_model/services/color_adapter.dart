@@ -3,7 +3,7 @@ import 'package:hive/hive.dart';
 
 class ColorAdapter extends TypeAdapter<Color> {
   @override
-  final int typeId = 3; // Уникальный идентификатор для типа Color
+  final int typeId = 3;
 
   @override
   Color read(BinaryReader reader) {
@@ -13,6 +13,6 @@ class ColorAdapter extends TypeAdapter<Color> {
 
   @override
   void write(BinaryWriter writer, Color obj) {
-    writer.writeInt(obj.value); // Сохраняем ARGB-значение цвета
+    writer.writeInt(obj.value);
   }
 }

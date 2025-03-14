@@ -62,8 +62,13 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
                       },
                     ),
             ),
-            //> возможно применение визуализации в title...
-            title: Text(widget.filePath.split('/').last),
+            //> В title возможно применение визуализации
+            //> при использовании стороннего пакета...
+            title: Text(
+              widget.filePath.split('/').last,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
             subtitle: Text(durationText),
           );
         } else {
