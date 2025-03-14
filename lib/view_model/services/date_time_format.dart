@@ -4,7 +4,7 @@ import 'package:intl/intl.dart';
 String formatMessageTime(DateTime timestamp, {bool isChatScreen = true}) {
   final now = DateTime.now();
   final today = DateTime(now.year, now.month, now.day);
-  final yesterday = today.subtract(const Duration(days: 1));
+  // final yesterday = today.subtract(const Duration(days: 1));
 
   final difference = now.difference(timestamp);
 

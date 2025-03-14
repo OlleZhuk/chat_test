@@ -17,14 +17,12 @@ class ChatListScreen extends ConsumerStatefulWidget {
 class ChatListScreenState extends ConsumerState<ChatListScreen> {
   final _searchController = TextEditingController();
   final _focusNode = FocusNode();
-  // late final ScrollController _scrollController;
   final _scrollController = ScrollController();
   String _searchQuery = '';
 
   @override
   void initState() {
     super.initState();
-    // _scrollController = ScrollController();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _scrollController.jumpTo(_scrollController.position.minScrollExtent);
       _searchController.addListener(_onSearchChanged);
