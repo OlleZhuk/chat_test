@@ -20,7 +20,7 @@ String formatMessageTime(DateTime timestamp, {bool isChatScreen = true}) {
         ? DateFormat('HH:mm').format(timestamp)
         //> Для экрана сообщений
         : 'Сегодня';
-  } else if (timestamp.isAfter(yesterday) && timestamp.isBefore(today)) {
+  } else if (timestamp.isBefore(today)) {
     //> Если вчера
     return 'Вчера';
   } else {

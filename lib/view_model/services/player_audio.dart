@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 
 import '../../model/user.dart';
+import '../widgets/divider.dart';
 
 class AudioPlayerWidget extends StatefulWidget {
   const AudioPlayerWidget({
@@ -64,11 +65,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
             ),
             //> В title возможно применение визуализации
             //> при использовании стороннего пакета...
-            title: Text(
-              widget.filePath.split('/').last,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
+            title: dividerBuilder(Colors.grey),
             subtitle: Text(durationText),
           );
         } else {

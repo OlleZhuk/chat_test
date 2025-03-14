@@ -220,9 +220,15 @@ class _OutputTextMessagesState extends ConsumerState<_OutputTextMessages> {
 
   //* Метод сборки файлового сообщения
   Widget _buildFileMessage(
-      Message message, String formattedTime, bool isOutgoing) {
+    Message message,
+    String formattedTime,
+    bool isOutgoing,
+  ) {
+    //
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        //>1< Картинка файла
         if (message.fileType == 'image') Image.file(File(message.filePath)),
         if (message.fileType == 'video')
           VideoPlayerWidget(filePath: message.filePath),
@@ -231,17 +237,17 @@ class _OutputTextMessagesState extends ConsumerState<_OutputTextMessages> {
         if (message.fileType == 'file')
           GestureDetector(
             onTap: () => _openFile(message.filePath),
-            child: Row(
-              children: [
-                const Text('Файл: '),
-                Text(
-                  message.filePath.split('/').last,
-                  style: const TextStyle(fontSize: 20),
-                ),
-              ],
-            ),
+            child: const Text('Файл: ', style: TextStyle(color: Colors.grey)),
           ),
+        //>2<
         const SizedBox(height: 6),
+        //>3< Имя файла
+        Text(
+          message.filePath.split('/').last,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontSize: 16),
+        ),
         //> не показывать строку со временем при таких условиях:
         (message.fileType == 'image' ||
                     message.fileType == 'video' ||
@@ -249,6 +255,7 @@ class _OutputTextMessagesState extends ConsumerState<_OutputTextMessages> {
                     message.fileType == 'file') &&
                 message.text.isNotEmpty
             ? Container()
+            //> Строка со временем и отметкой
             : Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 crossAxisAlignment: CrossAxisAlignment.end,
@@ -286,12 +293,12 @@ class _OutputTextMessagesState extends ConsumerState<_OutputTextMessages> {
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
-          dividerBuilder(divColor),
+          Expanded(child: dividerBuilder(divColor)),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 13),
             child: Text(dateText),
           ),
-          dividerBuilder(divColor),
+          Expanded(child: dividerBuilder(divColor)),
         ],
       ),
     );
@@ -558,6 +565,15 @@ class InputTextMessageState extends ConsumerState<_InputTextMessage> {
     final textController = TextEditingController(text: initialText);
     XFile? recordedFile;
 
+    Widget fileName = file != null
+        ? Text(
+            file.path.split('/').last,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: Colors.grey),
+          )
+        : Container();
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -571,113 +587,134 @@ class InputTextMessageState extends ConsumerState<_InputTextMessage> {
                 10,
                 MediaQuery.of(context).viewInsets.bottom,
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  //> Заголовок
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        dividerBuilder(widget.user.color),
-                        Text(
-                          file != null
-                              ? (file.path.endsWith('.jpg') ||
-                                      file.path.endsWith('.png'))
-                                  ? 'Отправить изображение'
-                                  : file.path.endsWith('.mp4')
-                                      ? 'Отправить видео'
-                                      : file.path.endsWith('.mp3')
-                                          ? 'Отправить аудио'
-                                          : 'Отправить файл'
-                              : 'Голосовое сообщение',
-                          style: TextStyle(
-                              color: widget.user.color,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    //>1< Заголовок
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          dividerBuilder(widget.user.color),
+                          Text(
+                            file != null
+                                ? (file.path.endsWith('.jpg') ||
+                                        file.path.endsWith('.png'))
+                                    ? 'Отправить изображение'
+                                    : file.path.endsWith('.mp4')
+                                        ? 'Отправить видео'
+                                        : file.path.endsWith('.mp3')
+                                            ? 'Отправить аудио'
+                                            : 'Отправить файл'
+                                : 'Голосовое сообщение',
+                            style: TextStyle(
+                                color: widget.user.color,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold),
+                          ),
+                          dividerBuilder(widget.user.color),
+                        ],
+                      ),
+                    ),
+                    //>2< Отображение файла или виджета записи
+                    if (file != null)
+                      if (file.path.endsWith('.jpg') ||
+                          file.path.endsWith('.png'))
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Image.file(file, fit: BoxFit.contain),
+                            const SizedBox(height: 6),
+                            fileName,
+                          ],
+                        )
+                      else if (file.path.endsWith('.mp4'))
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            VideoPlayerWidget(filePath: file.path),
+                            const SizedBox(height: 6),
+                            fileName,
+                          ],
+                        )
+                      else if (file.path.endsWith('.mp3'))
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            AudioPlayerWidget(
+                                user: widget.user, filePath: file.path),
+                          ],
+                        )
+                      else
+                        //> Файл без определенного типа
+                        fileName
+                    // Text(
+                    //   file.path.split('/').last,
+                    //   style: const TextStyle(fontSize: 16),
+                    // )
+                    //>2< if (file = null)
+                    else
+                      VoiceRecord(
+                        onSend: (file) => setState(() {
+                          recordedFile = file;
+                        }),
+                        user: widget.user,
+                      ),
+                    //
+                    //>3< Отступ
+                    const SizedBox(height: 6),
+                    //>4< Сообщение
+                    if (file != null)
+                      TextField(
+                        controller: textController,
+                        maxLines: null,
+                        decoration: InputDecoration(
+                          constraints: const BoxConstraints(maxHeight: 80),
+                          hintText: 'Сообщение...',
+                          suffixIcon: IconButton(
+                            icon: Image.asset('assets/icons/Close.png',
+                                scale: 1.2),
+                            onPressed: () {
+                              textController.clear();
+                              FocusScope.of(context).unfocus();
+                            },
+                          ),
                         ),
-                        dividerBuilder(widget.user.color),
+                      ),
+                    //
+                    //>5< Кнопки "Отмена" и "Отправить"
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () {
+                            _textController.clear();
+                            FocusScope.of(context).unfocus();
+                            Navigator.pop(context);
+                          },
+                          child: const Text('Отмена'),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            final text = textController.text.trim();
+                            if (file != null) {
+                              //> Отправка файла и текста
+                              _sendFileWithText(file, text);
+                            } else if (recordedFile != null) {
+                              //> Отправка голосового сообщения
+                              _sendVoiceMessage(recordedFile!);
+                            }
+                            Navigator.pop(context);
+                          },
+                          child: const Text('Отправить'),
+                        ),
                       ],
                     ),
-                  ),
-                  //> Отображение файла или виджета записи
-                  if (file != null)
-                    if (file.path.endsWith('.jpg') ||
-                        file.path.endsWith('.png'))
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Image.file(file,
-                              width: double.infinity, fit: BoxFit.cover),
-                          const SizedBox(height: 6),
-                          Text(file.path.split('/').last)
-                        ],
-                      )
-                    else if (file.path.endsWith('.mp4'))
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          VideoPlayerWidget(filePath: file.path),
-                          const SizedBox(height: 6),
-                          Text(file.path.split('/').last)
-                        ],
-                      )
-                    else if (file.path.endsWith('.mp3'))
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          AudioPlayerWidget(
-                              user: widget.user, filePath: file.path),
-                        ],
-                      )
-                    else
-                      //> Файл без определенного типа
-                      Text(
-                        file.path.split('/').last,
-                        style: const TextStyle(fontSize: 16),
-                      )
-                  else
-                    VoiceRecord(
-                      onSend: (file) => setState(() {
-                        recordedFile = file;
-                      }),
-                      user: widget.user,
-                    ),
-                  //> Поле ввода текста
-                  isSubmitButtonVisible
-                      ? TextField(
-                          controller: textController,
-                          decoration:
-                              const InputDecoration(hintText: 'Сообщение...'),
-                        )
-                      : Container(),
-                  //> Кнопки "Отмена" и "Отправить"
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text('Отмена'),
-                      ),
-                      TextButton(
-                        onPressed: () {
-                          final text = textController.text.trim();
-                          if (file != null) {
-                            //> Отправка файла и текста
-                            _sendFileWithText(file, text);
-                          } else if (recordedFile != null) {
-                            //> Отправка голосового сообщения
-                            _sendVoiceMessage(recordedFile!);
-                          }
-                          Navigator.pop(context);
-                        },
-                        child: const Text('Отправить'),
-                      ),
-                    ],
-                  ),
-                ],
+                  ],
+                ),
               ),
             );
           },
@@ -694,12 +731,19 @@ class InputTextMessageState extends ConsumerState<_InputTextMessage> {
         keyboardType: TextInputType.multiline,
         maxLines: null, // Многострочный режим
         textCapitalization: TextCapitalization.sentences,
-        decoration: const InputDecoration(
-          constraints: BoxConstraints(maxHeight: 180),
+        decoration: InputDecoration(
+          constraints: const BoxConstraints(maxHeight: 180),
           hintText: 'Сообщение...',
           filled: false,
-          border: OutlineInputBorder(
+          border: const OutlineInputBorder(
             borderRadius: BorderRadius.all(Radius.circular(26)),
+          ),
+          suffixIcon: IconButton(
+            icon: Image.asset('assets/icons/Close.png', scale: 1.2),
+            onPressed: () {
+              _textController.clear();
+              FocusScope.of(context).unfocus();
+            },
           ),
         ),
 
@@ -715,15 +759,14 @@ class InputTextMessageState extends ConsumerState<_InputTextMessage> {
   //* Метод отправки текстового сообщения:
   void _submitMessage() async {
     final enteredTextMessage = _textController.text;
+    FocusScope.of(context).unfocus();
+    _textController.clear();
 
     if (enteredTextMessage.trim().isEmpty) return;
 
     ref
         .read(messageProvider.notifier)
         .sendMessage(widget.user, enteredTextMessage);
-
-    FocusScope.of(context).unfocus();
-    _textController.clear();
   }
 
   //* Метод отправки файла и текста:
@@ -776,7 +819,7 @@ class InputTextMessageState extends ConsumerState<_InputTextMessage> {
         widget.user.id, // userId
         '', // text
         file.path, // filePath
-        'audio', // fileType
+        'voice', // fileType
         DateTime.now(), // timestamp
         true, // isOutgoing
       );
