@@ -61,6 +61,6 @@ Message incomingMessage(user) => Message(
       'Привет, я норм. Как сам?',
       '',
       '',
-      DateTime.now().add(const Duration(minutes: 2)),
+      DateTime.now().add(const Duration(seconds: 20)),
       false,
     );

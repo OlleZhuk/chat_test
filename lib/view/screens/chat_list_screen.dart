@@ -16,22 +16,35 @@ class ChatListScreen extends ConsumerStatefulWidget {
 
 class ChatListScreenState extends ConsumerState<ChatListScreen> {
   final _searchController = TextEditingController();
-  late final ScrollController _scrollController;
+  final _focusNode = FocusNode();
+  // late final ScrollController _scrollController;
+  final _scrollController = ScrollController();
   String _searchQuery = '';
 
   @override
   void initState() {
     super.initState();
-    _scrollController = ScrollController();
+    // _scrollController = ScrollController();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _scrollController.jumpTo(_scrollController.position.minScrollExtent);
+      _searchController.addListener(_onSearchChanged);
     });
+  }
+
+  void _onSearchChanged() {
+    setState(() => _searchQuery = _searchController.text);
+  }
+
+  void _resetSearch() {
+    _searchController.clear();
+    setState(() => _searchQuery = '');
   }
 
   @override
   void dispose() {
     _searchController.dispose();
     _scrollController.dispose();
+    _focusNode.dispose();
     super.dispose();
   }
 
@@ -46,7 +59,6 @@ class ChatListScreenState extends ConsumerState<ChatListScreen> {
           ref.read(messageProvider.notifier).getLastMessageForUser(a.id);
       final lastMessageB =
           ref.read(messageProvider.notifier).getLastMessageForUser(b.id);
-
       final timestampA = lastMessageA?.timestamp ?? DateTime(1970);
       final timestampB = lastMessageB?.timestamp ?? DateTime(1970);
 
@@ -84,17 +96,15 @@ class ChatListScreenState extends ConsumerState<ChatListScreen> {
             //> Поиск
             child: TextField(
               controller: _searchController,
+              focusNode: _focusNode,
               decoration: InputDecoration(
                 hintText: "Поиск",
                 prefixIcon: Image.asset('assets/icons/Search_s.png'),
                 suffixIcon: IconButton(
                   icon: Image.asset('assets/icons/Close.png'),
                   onPressed: () {
-                    setState(() {
-                      _searchQuery = '';
-                    });
-                    _searchController.clear();
-                    FocusScope.of(context).unfocus();
+                    _resetSearch();
+                    _focusNode.unfocus();
                   },
                 ),
               ),
@@ -148,6 +158,8 @@ class ChatListScreenState extends ConsumerState<ChatListScreen> {
                     : '',
               ),
               onTap: () {
+                _resetSearch();
+                _focusNode.unfocus();
                 Navigator.push(
                   context,
                   MaterialPageRoute(

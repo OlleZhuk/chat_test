@@ -34,7 +34,6 @@ class MessagesScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        leadingWidth: 30,
         toolbarHeight: 90,
         title: Row(
           mainAxisSize: MainAxisSize.min,
@@ -229,10 +228,16 @@ class _OutputTextMessagesState extends ConsumerState<_OutputTextMessages> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         //>1< Картинка файла
-        if (message.fileType == 'image') Image.file(File(message.filePath)),
+        if (message.fileType == 'image')
+          GestureDetector(
+            child: Image.file(File(message.filePath)),
+            onTap: () => _openFile(message.filePath),
+          ),
         if (message.fileType == 'video')
           VideoPlayerWidget(filePath: message.filePath),
         if (message.fileType == 'audio')
+          AudioPlayerWidget(filePath: message.filePath, user: widget.user),
+        if (message.fileType == 'voice')
           AudioPlayerWidget(filePath: message.filePath, user: widget.user),
         if (message.fileType == 'file')
           GestureDetector(
@@ -240,14 +245,15 @@ class _OutputTextMessagesState extends ConsumerState<_OutputTextMessages> {
             child: const Text('Файл: ', style: TextStyle(color: Colors.grey)),
           ),
         //>2<
-        const SizedBox(height: 6),
+        const SizedBox(height: 8),
         //>3< Имя файла
         Text(
           message.filePath.split('/').last,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(fontSize: 16),
+          style: const TextStyle(fontSize: 16, height: .8),
         ),
+        const Divider(thickness: 1, color: Colors.grey),
         //> не показывать строку со временем при таких условиях:
         (message.fileType == 'image' ||
                     message.fileType == 'video' ||
@@ -359,9 +365,9 @@ class _OutputTextMessagesState extends ConsumerState<_OutputTextMessages> {
         //> отступы для текста нижнего сообщения и остальных
         padding: isOutgoing
             ? isLast
-                ? const EdgeInsets.fromLTRB(13, 13, 36, 4)
+                ? const EdgeInsets.fromLTRB(13, 13, 36, 6)
                 : const EdgeInsets.all(13)
-            : const EdgeInsets.fromLTRB(36, 4, 13, 4),
+            : const EdgeInsets.fromLTRB(36, 4, 13, 6),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -651,10 +657,6 @@ class InputTextMessageState extends ConsumerState<_InputTextMessage> {
                       else
                         //> Файл без определенного типа
                         fileName
-                    // Text(
-                    //   file.path.split('/').last,
-                    //   style: const TextStyle(fontSize: 16),
-                    // )
                     //>2< if (file = null)
                     else
                       VoiceRecord(
