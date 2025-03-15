@@ -21,6 +21,7 @@ import '../../view_model/widgets/chat_bubble_left.dart';
 import '../../view_model/widgets/chat_bubble_right.dart';
 import '../../view_model/services/player_video_.dart';
 import '../../view_model/services/record_audio.dart';
+import 'gallery_screen.dart';
 
 class MessagesScreen extends StatelessWidget {
   const MessagesScreen({super.key, required this.user});
@@ -433,8 +434,16 @@ class InputTextMessageState extends ConsumerState<_InputTextMessage> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          //> "Скрепка" с выпадающим меню
-          _selectionMenu(),
+          //> "Скрепка" с экраном меню
+          IconButton(
+            icon: Image.asset('assets/icons/Attach.png'),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const GalleryScreen(),
+              ),
+            ),
+          ),
           //> Поле ввода текстового сообщения
           _textMessage(),
           isSubmitButtonVisible
@@ -458,46 +467,6 @@ class InputTextMessageState extends ConsumerState<_InputTextMessage> {
   //> Кнопка отправки появляется...
   void _updateButtonVisibility() {
     setState(() => isSubmitButtonVisible = _textController.text.isNotEmpty);
-  }
-
-  //* Меню выбора на скрепке
-  Widget _selectionMenu() {
-    return PopupMenuButton<String>(
-      offset: const Offset(0, -120),
-      icon: Image.asset('assets/icons/Attach.png'),
-      onSelected: (value) {
-        //> Обработка выбора пункта меню
-        if (value == 'images') {
-          _pickPhotoOrVideo();
-        } else if (value == 'files') {
-          _pickDocumentOrFile();
-        }
-      },
-      itemBuilder: (BuildContext context) => [
-        PopupMenuItem<String>(
-          value: 'images',
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Image.asset('assets/icons/Img.png'),
-              const SizedBox(width: 13),
-              const Text('Изображение'),
-            ],
-          ),
-        ),
-        PopupMenuItem<String>(
-          value: 'files',
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Image.asset('assets/icons/Attachment.png'),
-              const SizedBox(width: 13),
-              const Text('Другие файлы'),
-            ],
-          ),
-        ),
-      ],
-    );
   }
 
   //* Метод выбора "изображение" с запросом разрешения
