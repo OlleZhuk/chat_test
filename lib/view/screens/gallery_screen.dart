@@ -3,6 +3,8 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:photo_manager/photo_manager.dart';
 
+import '../../view_model/widgets/divider.dart';
+
 class GalleryScreen extends StatefulWidget {
   const GalleryScreen({super.key});
 
@@ -23,17 +25,14 @@ class GalleryScreenState extends State<GalleryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Галерея'),
-      ),
-      body: _buildContent(), // Контент в зависимости от выбранной кнопки
+      body: _buildContent(),
       bottomNavigationBar: BottomAppBar(
         height: 120,
         child: ListView.builder(
           scrollDirection: Axis.horizontal,
-          itemCount: 5, // Количество элементов
+          itemCount: 5,
           itemBuilder: (context, index) {
-            // Список данных для кнопок
+            //> Список данных для кнопок
             final List<Map<String, dynamic>> navItems = [
               {'icon': Icons.image, 'label': 'Галерея', 'color': Colors.blue},
               {'icon': Icons.videocam, 'label': 'Видео', 'color': Colors.red},
@@ -55,10 +54,8 @@ class GalleryScreenState extends State<GalleryScreen> {
             ];
 
             return Padding(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 6.0), // Отступы между элементами
+              padding: const EdgeInsets.symmetric(horizontal: 6.0),
               child: Column(
-                // mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   _buildNavButton(index, navItems[index]['icon'],
                       navItems[index]['label'], navItems[index]['color']),
@@ -154,31 +151,50 @@ class GalleryScreenState extends State<GalleryScreen> {
 
   //* Билдеры контента
   Widget _buildGalleryContent() {
-    return GridView.builder(
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3, // 3 изображения в ряду
-        crossAxisSpacing: 3, // Отступы между изображениями
-        mainAxisSpacing: 3,
-        childAspectRatio: 1, // Формат 1x1
-      ),
-      itemCount: _images.length,
-      itemBuilder: (context, index) {
-        final asset = _images[index];
+    return SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6.0),
+            child: Row(
+              children: [
+                BackButton(onPressed: () => Navigator.pop(context)),
+                const Text('Галерея', style: TextStyle(fontSize: 18)),
+                Expanded(child: dividerBuilder(Colors.blue)),
+              ],
+            ),
+          ),
+          Expanded(
+            child: GridView.builder(
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3, // 3 изображения в ряду
+                crossAxisSpacing: 3, // Отступы между изображениями
+                mainAxisSpacing: 3,
+                childAspectRatio: 1, // Формат 1x1
+              ),
+              itemCount: _images.length,
+              itemBuilder: (context, index) {
+                final asset = _images[index];
 
-        return FutureBuilder<Uint8List?>(
-          future: asset.thumbnailData,
-          builder: (context, snapshot) {
-            if (snapshot.hasData && snapshot.data != null) {
-              return Image.memory(
-                snapshot.data!,
-                fit: BoxFit.cover,
-              );
-            } else {
-              return const Center(child: CircularProgressIndicator());
-            }
-          },
-        );
-      },
+                return FutureBuilder<Uint8List?>(
+                  future: asset.thumbnailData,
+                  builder: (context, snapshot) {
+                    if (snapshot.hasData && snapshot.data != null) {
+                      return Image.memory(
+                        snapshot.data!,
+                        fit: BoxFit.cover,
+                      );
+                    } else {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 
