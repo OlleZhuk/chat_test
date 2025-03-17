@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -8,7 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:open_file/open_file.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:permission_handler/permission_handler.dart';
+import 'package:photo_manager/photo_manager.dart';
 
 import '../../model/message.dart';
 import '../../model/chat_bubble_radius.dart';
@@ -427,6 +426,26 @@ class InputTextMessageState extends ConsumerState<_InputTextMessage> {
     super.dispose();
   }
 
+  void _openGallery(context) async {
+    final selectedImage = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const GalleryScreen()),
+    );
+
+    if (selectedImage != null) {
+      if (selectedImage is AssetEntity) {
+        // Если это AssetEntity (изображение или видео из photo_manager)
+        final file = await selectedImage.file;
+        if (file != null) {
+          _showFileSendModal(context, file, null);
+        }
+      } else if (selectedImage is File) {
+        // Если это File (документ или другой файл из file_picker)
+        _showFileSendModal(context, selectedImage, null);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -437,12 +456,7 @@ class InputTextMessageState extends ConsumerState<_InputTextMessage> {
           //> "Скрепка" с экраном меню
           IconButton(
             icon: Image.asset('assets/icons/Attach.png'),
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const GalleryScreen(),
-              ),
-            ),
+            onPressed: () => _openGallery(context),
           ),
           //> Поле ввода текстового сообщения
           _textMessage(),
@@ -467,71 +481,6 @@ class InputTextMessageState extends ConsumerState<_InputTextMessage> {
   //> Кнопка отправки появляется...
   void _updateButtonVisibility() {
     setState(() => isSubmitButtonVisible = _textController.text.isNotEmpty);
-  }
-
-  //* Метод выбора "изображение" с запросом разрешения
-  Future<void> _pickPhotoOrVideo() async {
-    //> Запрос разрешения на доступ к хранилищу
-    final status = await Permission.storage.request();
-
-    if (status.isGranted) {
-      try {
-        final ImagePicker picker = ImagePicker();
-        final XFile? file = await picker.pickImage(source: ImageSource.gallery);
-
-        if (file != null) {
-          // Обработка выбранного фото/видео
-          final File imageFile = File(file.path);
-          if (mounted) {
-            _showFileSendModal(context, imageFile, _textController.text.trim());
-          }
-        }
-      } catch (e) {
-        // Обработка исключения
-        if (mounted) _showAlert(context, 'Галерея недоступна');
-      }
-    } else {
-      // Разрешение отклонено
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Разрешение на доступ к хранилищу отклонено'),
-            duration: Duration(seconds: 3),
-          ),
-        );
-      }
-    }
-  }
-
-  //* Метод выбора "другие файлы" с запросом разрешения
-  Future<void> _pickDocumentOrFile() async {
-    // Запрашиваем разрешение на доступ к хранилищу
-    final status = await Permission.storage.request();
-    if (status.isGranted) {
-      try {
-        final FilePickerResult? result = await FilePicker.platform.pickFiles();
-        if (result != null) {
-          // Обработка выбранного файла
-          final File file = File(result.files.single.path!);
-          if (mounted) {
-            _showFileSendModal(context, file, _textController.text.trim());
-          }
-        }
-      } catch (e) {
-        // Обработка исключения
-        if (mounted) _showAlert(context, 'Файлы недоступны');
-      }
-    } else {
-      // Разрешение отклонено
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Разрешение на доступ к хранилищу отклонено'),
-            duration: Duration(seconds: 3),
-          ),
-        );
-      }
-    }
   }
 
   //* Модальный лист для отправки файлов
@@ -815,23 +764,6 @@ class InputTextMessageState extends ConsumerState<_InputTextMessage> {
     final savedFile = File('${appDir.path}/${file.path.split('/').last}');
 
     return await file.copy(savedFile.path);
-  }
-
-  //* Показ алерта
-  void _showAlert(BuildContext context, String message) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Ошибка'),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
   }
 
   //> Возможный метод отправки с клавиатуры:

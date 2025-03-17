@@ -1,8 +1,11 @@
+import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:photo_manager/photo_manager.dart';
 
+import '../../model/navbar_buttons.dart';
 import '../../view_model/widgets/divider.dart';
 
 class GalleryScreen extends StatefulWidget {
@@ -19,40 +22,20 @@ class GalleryScreenState extends State<GalleryScreen> {
   @override
   void initState() {
     super.initState();
-    _loadImages();
+    _loadAssets(RequestType.image);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: _buildContent(),
+      //
       bottomNavigationBar: BottomAppBar(
         height: 120,
         child: ListView.builder(
           scrollDirection: Axis.horizontal,
           itemCount: 5,
           itemBuilder: (context, index) {
-            //> Список данных для кнопок
-            final List<Map<String, dynamic>> navItems = [
-              {'icon': Icons.image, 'label': 'Галерея', 'color': Colors.blue},
-              {'icon': Icons.videocam, 'label': 'Видео', 'color': Colors.red},
-              {
-                'icon': Icons.audiotrack,
-                'label': 'Аудио',
-                'color': Colors.green
-              },
-              {
-                'icon': Icons.description,
-                'label': 'Документ',
-                'color': Colors.orange
-              },
-              {
-                'icon': Icons.insert_drive_file,
-                'label': 'Файл',
-                'color': Colors.purple
-              },
-            ];
-
             return Padding(
               padding: const EdgeInsets.symmetric(horizontal: 6.0),
               child: Column(
@@ -70,46 +53,105 @@ class GalleryScreenState extends State<GalleryScreen> {
     );
   }
 
-  //* Метод загрузки изображений галереи
-  Future<void> _loadImages() async {
-    //> Запрос разрешения
-    final PermissionState permission =
-        await PhotoManager.requestPermissionExtend();
-    if (permission.isAuth) {
-      //> Получаем альбомы
-      final List<AssetPathEntity> albums = await PhotoManager.getAssetPathList(
-        type: RequestType.image,
-      );
+  /// МЕТОДЫ ЗАГРУЗКИ, ОТОБРАЖЕНИЯ И ПЕРЕДАЧИ ФАЙЛОВ
 
-      if (albums.isNotEmpty) {
-        //> Получаем все изображения из первого альбома
-        // start: 0, end: 100 --> ограничения кол-ва
-        final List<AssetEntity> images =
-            await albums.first.getAssetListRange(start: 0, end: 100);
+  //* Загрузка файлов
+  Future<void> _loadAssets(type) async {
+    if (type == RequestType.image || type == RequestType.video) {
+      // Используем photo_manager для изображений и видео
+      final PermissionState permission =
+          await PhotoManager.requestPermissionExtend();
+      if (permission.isAuth) {
+        final List<AssetPathEntity> albums =
+            await PhotoManager.getAssetPathList(type: type);
 
-        setState(() {
-          _images = images;
-        });
+        if (albums.isNotEmpty) {
+          final List<AssetEntity> assets =
+              await albums.first.getAssetListRange(start: 0, end: 100);
+          setState(() => _images = assets);
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                  'Разрешение на доступ к галерее отклонено пользователем'),
+            ),
+          );
+        }
       }
     } else {
-      //> Если разрешение не предоставлено
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text(
-                  'Разрешение на доступ к галерее отклонено пользователем')),
-        );
+      FileType fileType;
+      List<String>? allowedExtensions;
+      // Определяем тип файлов для file_picker
+      switch (_selectedIndex) {
+        case 2:
+          fileType = FileType.audio; // Только аудио-файлы
+          break;
+        case 3:
+          fileType = FileType.custom; // Пользовательский тип (документы)
+          allowedExtensions = ['pdf', 'docx', 'xlsx', 'txt'];
+          break;
+        case 4:
+          fileType = FileType.any; // Любые файлы
+          break;
+        default:
+          fileType = FileType.any; // По умолчанию любые файлы
+      }
+      // Используем file_picker для документов и других файлов
+      final FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: fileType,
+        allowedExtensions: allowedExtensions,
+        // Выбор только одного файла
+        allowMultiple: false,
+      );
+
+      if (result != null && result.files.isNotEmpty) {
+        final File file = File(result.files.single.path!);
+        // Возвращаем выбранный файл
+        if (mounted) Navigator.pop(context, file);
       }
     }
   }
 
-  //* Виджет для кнопки навбара
+  //* Контент в зависимости от кнопки
+  Widget _buildContent() {
+    switch (_selectedIndex) {
+      case 0:
+        return _buildAssetContent('Галерея', Colors.blue, _images);
+      case 1:
+        return _buildAssetContent('Видео', Colors.red, _images);
+      default:
+        return const Center(child: Text('Выберите раздел'));
+    }
+  }
+
+  //* Виджет кнопки навбара
   Widget _buildNavButton(
       int index, IconData icon, String tooltip, Color color) {
     return IconButton(
       onPressed: () {
         setState(() {
-          _selectedIndex = index; // Обновляем активную кнопку
+          //> Обновление активной кнопки
+          _selectedIndex = index;
+          //> Вызов загрузки файлов
+          switch (index) {
+            case 0:
+              _loadAssets(RequestType.image);
+              break;
+            case 1:
+              _loadAssets(RequestType.video);
+              break;
+            case 2:
+              _loadAssets(RequestType.audio); // Для других файлов
+              break;
+            case 3:
+              _loadAssets(RequestType.all); // Для других файлов
+              break;
+            case 4:
+              _loadAssets(RequestType.all); // Для других файлов
+              break;
+          }
         });
       },
       icon: Container(
@@ -117,8 +159,8 @@ class GalleryScreenState extends State<GalleryScreen> {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           border: _selectedIndex == index
-              ? Border.all(
-                  color: color, width: 2) // Обводка для активной кнопки
+              //> Обводка для активной кнопки
+              ? Border.all(color: color, width: 2)
               : null,
         ),
         child: CircleAvatar(
@@ -131,26 +173,12 @@ class GalleryScreenState extends State<GalleryScreen> {
     );
   }
 
-  //* Контент в зависимости от выбранной кнопки
-  Widget _buildContent() {
-    switch (_selectedIndex) {
-      case 0:
-        return _buildGalleryContent();
-      case 1:
-        return _buildVideoContent();
-      case 2:
-        return _buildAudioContent();
-      case 3:
-        return _buildDocumentContent();
-      case 4:
-        return _buildFileContent();
-      default:
-        return const Center(child: Text('Выберите раздел'));
-    }
-  }
-
-  //* Билдеры контента
-  Widget _buildGalleryContent() {
+  //* Билдер сетки отображения
+  Widget _buildAssetContent(
+    String title,
+    Color color,
+    List<dynamic> assets,
+  ) {
     return SafeArea(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -160,57 +188,42 @@ class GalleryScreenState extends State<GalleryScreen> {
             child: Row(
               children: [
                 BackButton(onPressed: () => Navigator.pop(context)),
-                const Text('Галерея', style: TextStyle(fontSize: 18)),
-                Expanded(child: dividerBuilder(Colors.blue)),
+                Text(title, style: const TextStyle(fontSize: 18)),
+                Expanded(child: dividerBuilder(color)),
               ],
             ),
           ),
           Expanded(
-            child: GridView.builder(
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3, // 3 изображения в ряду
-                crossAxisSpacing: 3, // Отступы между изображениями
-                mainAxisSpacing: 3,
-                childAspectRatio: 1, // Формат 1x1
-              ),
-              itemCount: _images.length,
-              itemBuilder: (context, index) {
-                final asset = _images[index];
-
-                return FutureBuilder<Uint8List?>(
-                  future: asset.thumbnailData,
-                  builder: (context, snapshot) {
-                    if (snapshot.hasData && snapshot.data != null) {
-                      return Image.memory(
+              child: GridView.builder(
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              crossAxisSpacing: 3,
+              mainAxisSpacing: 3,
+              childAspectRatio: 1,
+            ),
+            itemCount: assets.length,
+            itemBuilder: (context, index) {
+              final asset = assets[index];
+              return FutureBuilder<Uint8List?>(
+                future: asset.thumbnailData,
+                builder: (context, snapshot) {
+                  if (snapshot.hasData && snapshot.data != null) {
+                    return GestureDetector(
+                      onTap: () => Navigator.pop(context, asset),
+                      child: Image.memory(
                         snapshot.data!,
                         fit: BoxFit.cover,
-                      );
-                    } else {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-                  },
-                );
-              },
-            ),
-          ),
+                      ),
+                    );
+                  } else {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                },
+              );
+            },
+          )),
         ],
       ),
     );
-  }
-
-  Widget _buildVideoContent() {
-    return const Center(child: Text('Видео'));
-  }
-
-  Widget _buildAudioContent() {
-    return const Center(child: Text('Аудио'));
-  }
-
-  Widget _buildDocumentContent() {
-    return const Center(child: Text('Документ'));
-  }
-
-  Widget _buildFileContent() {
-    return const Center(child: Text('Файл'));
   }
 }
